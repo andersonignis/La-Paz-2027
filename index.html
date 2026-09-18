@@ -52,12 +52,6 @@
             border-bottom: 2px solid #ecf0f1;
             padding-bottom: 5px;
         }
-        .highlight {
-            background-color: #e8f8f5;
-            padding: 10px;
-            border-left: 4px solid #1abc9c;
-            margin: 10px 0;
-        }
         .form-group {
             display: flex;
             gap: 10px;
@@ -87,9 +81,9 @@
         button:hover {
             background-color: #2ecc71;
         }
-        .btn-edit { background-color: #f39c12; margin-right: 5px;}
+        .btn-edit { background-color: #f39c12; margin-right: 5px; padding: 6px 10px; font-size: 0.9em;}
         .btn-edit:hover { background-color: #f1c40f; }
-        .btn-delete { background-color: #c0392b; }
+        .btn-delete { background-color: #c0392b; padding: 6px 10px; font-size: 0.9em;}
         .btn-delete:hover { background-color: #e74c3c; }
         table {
             width: 100%;
@@ -109,6 +103,18 @@
             color: #27ae60;
             margin-bottom: 10px;
             font-weight: bold;
+        }
+        .card-roteiro {
+            background: #fff;
+            margin: 10px 0;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            border-radius: 0 4px 4px 0;
         }
         footer {
             text-align: center;
@@ -136,20 +142,25 @@
 <div class="container">
     <section id="roteiro">
         <h2>📅 Roteiro da Viagem</h2>
-        <ul>
-            <li><strong>Dia 13/03/2027 (Sábado) - A Partida:</strong>
-                <div class="highlight">
-                    <strong>06:00 - 11:00:</strong> Ônibus da Transacreana saindo da Rodoviária Internacional de Rio Branco com destino ao Terminal Rodoviário de Brasiléia (Duração estimada: 5h).
-                </div>
-                <em>Próximo passo a definir: Travessia da fronteira para Cobija e transporte até La Paz.</em>
-            </li>
-            <li><strong>Dias Seguintes:</strong> Aclimatação à altitude (3.640m), passeios no Teleférico, Mercado das Bruxas, etc.</li>
-        </ul>
+        <p class="aviso-nuvem">✅ Sincronização ativada: Adicione passeios e horários em tempo real.</p>
+        
+        <form id="form-roteiro" class="form-group">
+            <input type="hidden" id="edit-id-roteiro">
+            <input type="date" id="data-roteiro" required>
+            <input type="time" id="hora-roteiro" required>
+            <input type="text" id="desc-roteiro" placeholder="Ex: Ônibus Transacreana para Brasiléia" required style="flex: 2;">
+            
+            <button type="submit" id="btn-salvar-roteiro">Adicionar Atividade</button>
+        </form>
+
+        <div id="lista-roteiro">
+            <p>Carregando roteiro...</p>
+        </div>
     </section>
 
     <section id="orcamento">
         <h2>💰 Orçamento e Despesas</h2>
-        <p class="aviso-nuvem">✅ Sincronização ativada: As alterações feitas aqui aparecem para todos em tempo real.</p>
+        <p class="aviso-nuvem">✅ Sincronização ativada: As alterações feitas aqui aparecem para todos.</p>
         
         <form id="form-despesa" class="form-group">
             <input type="hidden" id="edit-id">
@@ -169,7 +180,7 @@
                 <option value="Sim">Dividido com o grupo</option>
             </select>
             
-            <button type="submit" id="btn-salvar">Adicionar</button>
+            <button type="submit" id="btn-salvar">Adicionar Despesa</button>
         </form>
 
         <table>
@@ -208,11 +219,9 @@
 
 <!-- Código Firebase (Módulo) -->
 <script type="module">
-    // Importações do Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-    // Configuração do seu projeto
     const firebaseConfig = {
         apiKey: "AIzaSyCteFGVFOBDt_yMUZUCqS0RJ5hfF2A-Yoc",
         authDomain: "la-paz-2027-36647.firebaseapp.com",
@@ -223,21 +232,105 @@
         databaseURL: "https://la-paz-2027-36647-default-rtdb.firebaseio.com"
     };
 
-    // Inicialização
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const despesasRef = ref(db, 'despesas');
 
-    const form = document.getElementById('form-despesa');
+    // ==========================================
+    // LÓGICA DO ROTEIRO
+    // ==========================================
+    const roteiroRef = ref(db, 'roteiro');
+    const formRoteiro = document.getElementById('form-roteiro');
+    const listaRoteiro = document.getElementById('lista-roteiro');
+    const editIdRoteiroInput = document.getElementById('edit-id-roteiro');
+    const btnSalvarRoteiro = document.getElementById('btn-salvar-roteiro');
+
+    onValue(roteiroRef, (snapshot) => {
+        listaRoteiro.innerHTML = '';
+        const data = snapshot.val();
+        
+        if (data) {
+            // Transforma em array e ordena por data e hora
+            const roteiroArray = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+            roteiroArray.sort((a, b) => {
+                const dataA = new Date(`${a.data}T${a.hora}`);
+                const dataB = new Date(`${b.data}T${b.hora}`);
+                return dataA - dataB;
+            });
+
+            roteiroArray.forEach(item => {
+                const partesData = item.data.split('-');
+                const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
+                
+                const div = document.createElement('div');
+                div.className = 'card-roteiro';
+                div.innerHTML = `
+                    <div style="flex: 1; min-width: 200px;">
+                        <strong style="color: #2c3e50;">📅 ${dataFormatada} &nbsp; | &nbsp; ⏰ ${item.hora}</strong><br>
+                        <span style="font-size: 1.1rem; display: inline-block; margin-top: 5px;">${item.desc}</span>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn-edit btn-edit-roteiro" data-id="${item.id}">Editar</button>
+                        <button class="btn-delete btn-delete-roteiro" data-id="${item.id}">Excluir</button>
+                    </div>
+                `;
+                listaRoteiro.appendChild(div);
+            });
+
+            document.querySelectorAll('.btn-delete-roteiro').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if(confirm("Excluir esta atividade do roteiro?")) {
+                        remove(ref(db, 'roteiro/' + e.target.getAttribute('data-id')));
+                    }
+                });
+            });
+
+            document.querySelectorAll('.btn-edit-roteiro').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const atividade = data[id];
+                    document.getElementById('data-roteiro').value = atividade.data;
+                    document.getElementById('hora-roteiro').value = atividade.hora;
+                    document.getElementById('desc-roteiro').value = atividade.desc;
+                    editIdRoteiroInput.value = id;
+                    btnSalvarRoteiro.textContent = "Atualizar Atividade";
+                    window.scrollTo(0, document.getElementById('roteiro').offsetTop);
+                });
+            });
+        } else {
+            listaRoteiro.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Nenhuma atividade cadastrada ainda. Adicione o primeiro dia de viagem!</p>';
+        }
+    });
+
+    formRoteiro.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const novaAtividade = {
+            data: document.getElementById('data-roteiro').value,
+            hora: document.getElementById('hora-roteiro').value,
+            desc: document.getElementById('desc-roteiro').value
+        };
+        const editKey = editIdRoteiroInput.value;
+        if (editKey) {
+            update(ref(db, 'roteiro/' + editKey), novaAtividade);
+            btnSalvarRoteiro.textContent = "Adicionar Atividade";
+        } else {
+            push(roteiroRef, novaAtividade);
+        }
+        formRoteiro.reset();
+        editIdRoteiroInput.value = '';
+    });
+
+    // ==========================================
+    // LÓGICA DO ORÇAMENTO (Mantida intacta)
+    // ==========================================
+    const despesasRef = ref(db, 'despesas');
+    const formDespesa = document.getElementById('form-despesa');
     const tabela = document.getElementById('tabela-despesas');
     const editIdInput = document.getElementById('edit-id');
     const btnSalvar = document.getElementById('btn-salvar');
 
-    // Escuta as mudanças no banco de dados em tempo real
     onValue(despesasRef, (snapshot) => {
         tabela.innerHTML = '';
         const data = snapshot.val();
-        
         if (data) {
             Object.keys(data).forEach(key => {
                 const d = data[key];
@@ -248,49 +341,42 @@
                     <td>${d.pagador}</td>
                     <td>${d.dividido}</td>
                     <td>
-                        <button class="btn-edit" data-id="${key}">Editar</button>
-                        <button class="btn-delete" data-id="${key}">Excluir</button>
+                        <button class="btn-edit btn-edit-despesa" data-id="${key}">Editar</button>
+                        <button class="btn-delete btn-delete-despesa" data-id="${key}">Excluir</button>
                     </td>
                 `;
                 tabela.appendChild(tr);
             });
 
-            // Ações do botão excluir
-            document.querySelectorAll('.btn-delete').forEach(btn => {
+            document.querySelectorAll('.btn-delete-despesa').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const id = e.target.getAttribute('data-id');
                     if(confirm("Tem certeza que deseja excluir esta despesa?")) {
-                        remove(ref(db, 'despesas/' + id));
+                        remove(ref(db, 'despesas/' + e.target.getAttribute('data-id')));
                     }
                 });
             });
 
-            // Ações do botão editar
-            document.querySelectorAll('.btn-edit').forEach(btn => {
+            document.querySelectorAll('.btn-edit-despesa').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.target.getAttribute('data-id');
                     const despesa = data[id];
-                    
                     document.getElementById('desc').value = despesa.desc;
                     document.getElementById('moeda').value = despesa.moeda;
                     document.getElementById('valor').value = despesa.valor;
                     document.getElementById('pagador').value = despesa.pagador;
                     document.getElementById('dividido').value = despesa.dividido;
                     editIdInput.value = id;
-                    
-                    btnSalvar.textContent = "Atualizar";
+                    btnSalvar.textContent = "Atualizar Despesa";
                     document.getElementById('desc').focus();
                 });
             });
         } else {
-            tabela.innerHTML = '<tr><td colspan="5">Nenhuma despesa cadastrada ainda.</td></tr>';
+            tabela.innerHTML = '<tr><td colspan="5" style="text-align:center; color: #7f8c8d;">Nenhuma despesa cadastrada ainda.</td></tr>';
         }
     });
 
-    // Envio do formulário (Criar ou Atualizar)
-    form.addEventListener('submit', (e) => {
+    formDespesa.addEventListener('submit', (e) => {
         e.preventDefault();
-        
         const novaDespesa = {
             desc: document.getElementById('desc').value,
             moeda: document.getElementById('moeda').value,
@@ -298,17 +384,14 @@
             pagador: document.getElementById('pagador').value,
             dividido: document.getElementById('dividido').value
         };
-
         const editKey = editIdInput.value;
-        
         if (editKey) {
             update(ref(db, 'despesas/' + editKey), novaDespesa);
-            btnSalvar.textContent = "Adicionar";
+            btnSalvar.textContent = "Adicionar Despesa";
         } else {
             push(despesasRef, novaDespesa);
         }
-        
-        form.reset();
+        formDespesa.reset();
         editIdInput.value = '';
     });
 </script>
