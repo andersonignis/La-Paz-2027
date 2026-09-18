@@ -541,22 +541,23 @@
                 <tr><td colspan="6">Carregando dados...</td></tr>
             </tbody>
         </table>
+        
         <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; margin-bottom: 25px;">
-    <div style="flex: 1; min-width: 180px; padding: 15px; background: #d35400; color: white; border-radius: 8px; text-align: center;">
-        <span style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold; opacity: 0.9;">Total Gasto Real</span>
-        <div style="font-size: 1.4rem; font-weight: bold; margin-top: 5px;">R$ <span id="total-despesa">0.00</span></div>
-    </div>
-    
-    <div id="card-saldo" style="flex: 1.2; min-width: 220px; padding: 15px; background: #27ae60; color: white; border-radius: 8px; text-align: center;">
-        <span id="label-saldo" style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold; opacity: 0.9;">Saldo Restante (Orçado - Gasto)</span>
-        <div style="font-size: 1.4rem; font-weight: bold; margin-top: 5px;">R$ <span id="valor-saldo">0.00</span></div>
-    </div>
-    
-    <div style="flex: 1; min-width: 180px; padding: 15px; background: #2c3e50; color: white; border-radius: 8px; text-align: center;">
-        <span style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold; opacity: 0.9;">Total Orçado (Meta)</span>
-        <div style="font-size: 1.4rem; font-weight: bold; margin-top: 5px;">R$ <span id="ref-orcamento">0.00</span></div>
-    </div>
-</div>
+            <div style="flex: 1; min-width: 180px; padding: 15px; background: #d35400; color: white; border-radius: 8px; text-align: center;">
+                <span style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold; opacity: 0.9;">Total Gasto Real</span>
+                <div style="font-size: 1.4rem; font-weight: bold; margin-top: 5px;">R$ <span id="total-despesa">0.00</span></div>
+            </div>
+            
+            <div id="card-saldo" style="flex: 1.2; min-width: 220px; padding: 15px; background: #27ae60; color: white; border-radius: 8px; text-align: center;">
+                <span id="label-saldo" style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold; opacity: 0.9;">Saldo Restante (Orçado - Gasto)</span>
+                <div style="font-size: 1.4rem; font-weight: bold; margin-top: 5px;">R$ <span id="valor-saldo">0.00</span></div>
+            </div>
+            
+            <div style="flex: 1; min-width: 180px; padding: 15px; background: #2c3e50; color: white; border-radius: 8px; text-align: center;">
+                <span style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold; opacity: 0.9;">Total Orçado (Meta)</span>
+                <div style="font-size: 1.4rem; font-weight: bold; margin-top: 5px;">R$ <span id="ref-orcamento">0.00</span></div>
+            </div>
+        </div>
     </section>
 
     <!-- MAPAS -->
@@ -608,6 +609,7 @@
     const provider = new GoogleAuthProvider();
 
     let currentUser = null;
+    let totalReaisOrcamentoAtual = 0;
 
     // ==========================================
     // SISTEMA DE AUTENTICAÇÃO
@@ -875,7 +877,6 @@
                 listaConcluidas.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Nenhuma atividade concluída ainda.</p>';
             }
 
-            // Alternar conclusão da atividade
             document.querySelectorAll('.chk-concluir-roteiro').forEach(chk => {
                 chk.addEventListener('change', (e) => {
                     if (!verificarAutenticado()) {
@@ -951,6 +952,31 @@
     });
 
     // ==========================================
+    // FUNÇÃO PARA CALCULAR O SALDO RESTANTE
+    // ==========================================
+    function atualizarSaldoDisponivel(totalGastoReal) {
+        const textoOrcamento = document.getElementById('total-orcamento')?.innerText || "0.00";
+        const totalOrcado = parseFloat(textoOrcamento.replace(',', '.')) || totalReaisOrcamentoAtual || 0;
+        
+        const saldo = totalOrcado - totalGastoReal;
+        const cardSaldo = document.getElementById('card-saldo');
+        const labelSaldo = document.getElementById('label-saldo');
+        const valorSaldo = document.getElementById('valor-saldo');
+        const refOrcamento = document.getElementById('ref-orcamento');
+
+        if (refOrcamento) refOrcamento.innerText = totalOrcado.toFixed(2);
+        if (valorSaldo) valorSaldo.innerText = saldo.toFixed(2);
+
+        if (saldo >= 0) {
+            if (cardSaldo) cardSaldo.style.background = '#27ae60';
+            if (labelSaldo) labelSaldo.innerText = 'Saldo Restante (Orçado - Gasto)';
+        } else {
+            if (cardSaldo) cardSaldo.style.background = '#c0392b';
+            if (labelSaldo) labelSaldo.innerText = '⚠️ Orçamento Estourado';
+        }
+    }
+
+    // ==========================================
     // ORÇAMENTO (PLANEJADO - ORDENADO POR DATA)
     // ==========================================
     const orcamentoRef = ref(db, 'orcamento');
@@ -1015,6 +1041,10 @@
             document.getElementById('total-orcamento').innerText = '0.00';
         }
         
+        totalReaisOrcamentoAtual = totalReais;
+        const totalGastoAtual = parseFloat(document.getElementById('total-despesa')?.innerText || "0") || 0;
+        atualizarSaldoDisponivel(totalGastoAtual);
+
         document.querySelectorAll('.btn-delete-tabela-orcamento').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (!verificarAutenticado()) return;
@@ -1130,6 +1160,8 @@
             document.getElementById('total-despesa').innerText = '0.00';
         }
         
+        atualizarSaldoDisponivel(totalReais);
+
         document.querySelectorAll('.btn-delete-tabela-despesas').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (!verificarAutenticado()) return;
