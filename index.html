@@ -12,7 +12,7 @@
             margin: 0;
             padding: 0;
         }
-                header {
+        header {
             background-color: #2c3e50;
             background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.65)), url('https://live.staticflickr.com/92/205083804_60315ff3f8_o.jpg');
             background-size: cover;
@@ -75,7 +75,7 @@
             border-radius: 5px;
             border: 1px solid #ddd;
         }
-        .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="date"], .form-group input[type="time"], .form-group select {
+        .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="date"], .form-group input[type="time"], .form-group input[type="url"], .form-group select {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -122,6 +122,20 @@
         .btn-delete:hover { background-color: #e74c3c; }
         .btn-export { background-color: #34495e; font-size: 0.85em; padding: 5px 10px; margin-left: 5px; }
         .btn-export:hover { background-color: #2c3e50; }
+        .btn-link-roteiro {
+            display: inline-block;
+            margin-top: 8px;
+            background-color: #3498db;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .btn-link-roteiro:hover {
+            background-color: #2980b9;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -250,13 +264,14 @@
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
-        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios e horários em tempo real.</p>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios, horários e links úteis em tempo real.</p>
         
         <form id="form-roteiro" class="form-group no-print">
             <input type="hidden" id="edit-id-roteiro">
             <input type="date" id="data-roteiro" required>
             <input type="time" id="hora-roteiro" required>
-            <input type="text" id="desc-roteiro" placeholder="Ex: Ônibus Transacreana para Brasiléia" required style="flex: 2;">
+            <input type="text" id="desc-roteiro" placeholder="Ex: Ônibus Transacreana para Brasiléia" required style="flex: 2; min-width: 200px;">
+            <input type="url" id="link-roteiro" placeholder="Link / Reserva (opcional - https://...)" style="flex: 2; min-width: 200px;">
             <button type="submit" id="btn-salvar-roteiro">Adicionar Atividade</button>
         </form>
 
@@ -311,14 +326,11 @@
             
             <select id="pagador-orcamento" required>
                 <option value="" disabled selected>Quem vai pagar?</option>
-                <!-- Preenchido via JS -->
             </select>
             
             <div style="width: 100%; margin-top: 5px;">
                 <span style="font-size: 0.9rem; color: #555; font-weight: bold;">Dividido com quem? (Marque as opções):</span>
-                <div id="divisao-orcamento-container" class="checkbox-group">
-                    <!-- Preenchido via JS -->
-                </div>
+                <div id="divisao-orcamento-container" class="checkbox-group"></div>
             </div>
             
             <button type="submit" id="btn-salvar-orcamento">Adicionar ao Orçamento</button>
@@ -366,14 +378,11 @@
             
             <select id="pagador-despesa" required>
                 <option value="" disabled selected>Quem pagou?</option>
-                <!-- Preenchido via JS -->
             </select>
             
             <div style="width: 100%; margin-top: 5px;">
                 <span style="font-size: 0.9rem; color: #555; font-weight: bold;">Dividido com quem? (Marque as opções):</span>
-                <div id="divisao-despesa-container" class="checkbox-group">
-                    <!-- Preenchido via JS -->
-                </div>
+                <div id="divisao-despesa-container" class="checkbox-group"></div>
             </div>
             
             <button type="submit" id="btn-salvar-despesa">Adicionar Despesa Real</button>
@@ -447,7 +456,6 @@
     // ==========================================
     const participantesRef = ref(db, 'participantes');
     
-    // Função global para excluir participante
     window.excluirParticipante = function(id) {
         if(confirm("Remover este participante?")) {
             remove(ref(db, 'participantes/' + id));
@@ -471,14 +479,8 @@
         if (data) {
             Object.keys(data).forEach(key => {
                 const nome = data[key].nome;
-                
-                // Exibe os crachás na aba Participantes
                 containerHtml.innerHTML += `<div class="badge-participante">${nome} <span onclick="window.excluirParticipante('${key}')" title="Remover">✖</span></div>`;
-                
-                // Alimenta os dropdowns (Quem pagou?)
                 optionsHtml += `<option value="${nome}">${nome}</option>`;
-                
-                // Alimenta os checkboxes (Dividido com?)
                 checkboxesHtml += `<label><input type="checkbox" value="${nome}"> ${nome}</label>`;
             });
         } else {
@@ -499,7 +501,7 @@
     });
 
     // ==========================================
-    // FUNÇÕES AUXILIARES DE FORMULÁRIO (Checkboxes)
+    // FUNÇÕES AUXILIARES (Checkboxes de divisão)
     // ==========================================
     function obterDivisaoSelecionada(containerId) {
         const container = document.getElementById(containerId);
@@ -518,7 +520,7 @@
         checkboxes.forEach(cb => {
             if (valorSalvo === "Todos do grupo" && cb.value === "Todos do grupo") {
                 cb.checked = true;
-            } else if (valorSalvo.includes(cb.value) && cb.value !== "Todos do grupo") {
+            } else if (valorSalvo && valorSalvo.includes(cb.value) && cb.value !== "Todos do grupo") {
                 cb.checked = true;
             } else {
                 cb.checked = false;
@@ -563,7 +565,7 @@
     }
 
     // ==========================================
-    // ROTEIRO
+    // ROTEIRO (Com suporte a Links)
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
@@ -580,14 +582,23 @@
             roteiroArray.forEach(item => {
                 const partesData = item.data.split('-');
                 const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
-                dadosRoteiroCSV.push([dataFormatada, item.hora, item.desc]);
+                const linkUrl = item.link ? item.link.trim() : '';
+                
+                dadosRoteiroCSV.push([dataFormatada, item.hora, item.desc, linkUrl]);
 
                 const div = document.createElement('div');
                 div.className = 'card-roteiro';
+                
+                let linkHtml = '';
+                if (linkUrl) {
+                    linkHtml = `<br><a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="btn-link-roteiro">🔗 Abrir Link / Reserva</a>`;
+                }
+
                 div.innerHTML = `
                     <div style="flex: 1; min-width: 200px;">
                         <strong style="color: #2c3e50;">📅 ${dataFormatada} &nbsp; | &nbsp; ⏰ ${item.hora}</strong><br>
                         <span style="font-size: 1.1rem; display: inline-block; margin-top: 5px;">${item.desc}</span>
+                        ${linkHtml}
                     </div>
                     <div class="no-print" style="margin-top: 10px;">
                         <button class="btn-edit btn-edit-roteiro" data-id="${item.id}">Editar</button>
@@ -608,8 +619,10 @@
                     document.getElementById('data-roteiro').value = data[id].data;
                     document.getElementById('hora-roteiro').value = data[id].hora;
                     document.getElementById('desc-roteiro').value = data[id].desc;
+                    document.getElementById('link-roteiro').value = data[id].link || '';
                     document.getElementById('edit-id-roteiro').value = id;
-                    document.getElementById('btn-salvar-roteiro').textContent = "Atualizar";
+                    document.getElementById('btn-salvar-roteiro').textContent = "Atualizar Atividade";
+                    window.scrollTo(0, document.getElementById('roteiro').offsetTop);
                 });
             });
         } else {
@@ -622,7 +635,8 @@
         const novaAtividade = {
             data: document.getElementById('data-roteiro').value,
             hora: document.getElementById('hora-roteiro').value,
-            desc: document.getElementById('desc-roteiro').value
+            desc: document.getElementById('desc-roteiro').value,
+            link: document.getElementById('link-roteiro').value.trim()
         };
         const editKey = document.getElementById('edit-id-roteiro').value;
         if (editKey) {
@@ -636,7 +650,7 @@
     });
 
     document.getElementById('export-roteiro-csv').addEventListener('click', () => {
-        exportarCSV("Roteiro_LaPaz_2027.csv", ["Data", "Hora", "Descrição"], dadosRoteiroCSV);
+        exportarCSV("Roteiro_LaPaz_2027.csv", ["Data", "Hora", "Descrição", "Link / Reserva"], dadosRoteiroCSV);
     });
 
     // ==========================================
@@ -706,7 +720,6 @@
                 document.getElementById('moeda-orcamento').value = d.moeda;
                 document.getElementById('valor-orcamento').value = d.valor;
                 
-                // Trata o Select e os Checkboxes
                 setTimeout(() => {
                     document.getElementById('pagador-orcamento').value = d.pagador;
                     setarDivisaoSelecionada('divisao-orcamento-container', d.dividido);
@@ -744,7 +757,7 @@
         
         document.getElementById('form-orcamento').reset();
         document.getElementById('edit-id-orcamento').value = '';
-        setarDivisaoSelecionada('divisao-orcamento-container', ''); // Limpa marcações
+        setarDivisaoSelecionada('divisao-orcamento-container', '');
     });
 
     document.getElementById('export-orcamento-csv').addEventListener('click', () => {
@@ -779,7 +792,6 @@
                 document.getElementById('moeda-despesa').value = d.moeda;
                 document.getElementById('valor-despesa').value = d.valor;
                 
-                // Trata o Select e os Checkboxes
                 setTimeout(() => {
                     document.getElementById('pagador-despesa').value = d.pagador;
                     setarDivisaoSelecionada('divisao-despesa-container', d.dividido);
@@ -817,7 +829,7 @@
         
         document.getElementById('form-despesa').reset();
         document.getElementById('edit-id-despesa').value = '';
-        setarDivisaoSelecionada('divisao-despesa-container', ''); // Limpa marcações
+        setarDivisaoSelecionada('divisao-despesa-container', '');
     });
 
     document.getElementById('export-despesas-csv').addEventListener('click', () => {
