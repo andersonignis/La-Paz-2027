@@ -207,10 +207,14 @@
             </select>
             <input type="number" id="valor" placeholder="Valor" step="0.01" required>
             <input type="text" id="pagador" placeholder="Quem pagou?" required>
-            <select id="dividido" required>
-                <option value="Não">Individual</option>
-                <option value="Sim">Dividido com o grupo</option>
-            </select>
+            
+            <!-- CAMPO DIVISÃO ESTILO SPLITWISE -->
+            <input type="text" id="dividido" list="opcoes-divisao" placeholder="Dividido com (Ex: Todos, Só o João)" required>
+            <datalist id="opcoes-divisao">
+                <option value="Individual (Apenas quem pagou)">
+                <option value="Todos do grupo">
+            </datalist>
+            
             <button type="submit" id="btn-salvar">Adicionar Despesa</button>
         </form>
 
@@ -220,7 +224,7 @@
                     <th>Despesa</th>
                     <th>Valor</th>
                     <th>Quem Pagou?</th>
-                    <th>Dividido?</th>
+                    <th>Dividido com?</th>
                     <th class="no-print">Ações</th>
                 </tr>
             </thead>
@@ -230,7 +234,7 @@
         </table>
     </section>
 
-       <section id="mapas">
+    <section id="mapas">
         <h2>🗺️ Mapa Interativo</h2>
         <p class="no-print">Navegue pelos pontos do nosso roteiro (adicione novos pontos diretamente no Google My Maps).</p>
         <div style="width: 100%; overflow: hidden; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
@@ -275,15 +279,12 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Arrays para armazenar dados em memória e exportar depois
     let dadosRoteiroCSV = [];
     let dadosDespesasCSV = [];
 
-    // Função global de exportação para CSV
     function exportarCSV(nomeArquivo, cabecalhos, linhas) {
         let csvContent = "data:text/csv;charset=utf-8," + cabecalhos.join(",") + "\n";
         linhas.forEach(linha => {
-            // Remove aspas e vírgulas para não quebrar a planilha
             const linhaLimpa = linha.map(item => `"${String(item).replace(/"/g, '""')}"`);
             csvContent += linhaLimpa.join(",") + "\n";
         });
@@ -313,7 +314,6 @@
                 const partesData = item.data.split('-');
                 const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
                 
-                // Popula o array para exportação
                 dadosRoteiroCSV.push([dataFormatada, item.hora, item.desc]);
 
                 const div = document.createElement('div');
@@ -445,7 +445,7 @@
     });
 
     document.getElementById('export-despesas-csv').addEventListener('click', () => {
-        exportarCSV("Despesas_LaPaz_2027.csv", ["Descrição", "Moeda", "Valor", "Quem Pagou", "Dividido"], dadosDespesasCSV);
+        exportarCSV("Despesas_LaPaz_2027.csv", ["Descrição", "Moeda", "Valor", "Quem Pagou", "Dividido Com"], dadosDespesasCSV);
     });
 
     // ==========================================
@@ -472,7 +472,6 @@
                 listaChecklist.appendChild(div);
             });
 
-            // Atualizar status (Concluído / Não Concluído)
             listaChecklist.querySelectorAll('input[type="checkbox"]').forEach(chk => {
                 chk.addEventListener('change', (e) => {
                     const id = e.target.getAttribute('data-id');
@@ -480,7 +479,6 @@
                 });
             });
 
-            // Excluir Item do Checklist
             listaChecklist.querySelectorAll('.btn-delete').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     if(confirm("Excluir item do checklist?")) {
