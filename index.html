@@ -13,18 +13,17 @@
             padding: 0;
         }
         header {
-            /* Imagem de fundo com um filtro escuro (linear-gradient) para destacar o texto */
             background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1533052219491-a20c93a0bfa2?q=80&w=2000&auto=format&fit=crop');
             background-size: cover;
             background-position: center;
             color: white;
             text-align: center;
-            padding: 5rem 15px; /* Aumentei o espaço para mostrar bem a foto */
+            padding: 5rem 15px;
             text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
         }
         header h1 {
             margin: 0;
-            font-size: 3rem; /* Título um pouco maior */
+            font-size: 3rem;
         }
         header p {
             font-size: 1.2rem;
@@ -62,6 +61,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-top: 30px;
         }
         .form-group {
             display: flex;
@@ -100,9 +100,10 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
+            font-size: 0.95rem;
         }
         th, td {
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #ddd;
             text-align: left;
         }
@@ -141,6 +142,33 @@
             height: 20px;
             cursor: pointer;
         }
+        .painel-cambio {
+            background-color: #e8f8f5;
+            border-left: 4px solid #1abc9c;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .painel-cambio input {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 80px;
+        }
+        .total-box {
+            text-align: right;
+            padding: 15px;
+            background: #2c3e50;
+            color: white;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 0 0 8px 8px;
+            margin-bottom: 20px;
+        }
         footer {
             text-align: center;
             padding: 20px;
@@ -148,9 +176,8 @@
             color: #7f8c8d;
             font-size: 0.9rem;
         }
-        /* Configurações para impressão (PDF) */
         @media print {
-            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export { display: none !important; }
+            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio { display: none !important; }
             body { background-color: white; }
             .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
             section { margin-bottom: 30px; page-break-inside: avoid; }
@@ -167,17 +194,20 @@
 <nav>
     <a href="#roteiro">Roteiro</a>
     <a href="#orcamento">Orçamento</a>
+    <a href="#despesas">Despesas Reais</a>
     <a href="#mapas">Mapas</a>
     <a href="#checklist">Checklist</a>
 </nav>
 
 <div class="container">
+    
+    <!-- ROTEIRO -->
     <section id="roteiro">
         <h2>
             📅 Roteiro da Viagem
             <div class="no-print">
-                <button class="btn-export" id="export-roteiro-csv">📥 Baixar Planilha</button>
-                <button class="btn-export" onclick="window.print()">🖨️ Salvar PDF</button>
+                <button class="btn-export" id="export-roteiro-csv">📥 Planilha</button>
+                <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
         <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios e horários em tempo real.</p>
@@ -190,57 +220,112 @@
             <button type="submit" id="btn-salvar-roteiro">Adicionar Atividade</button>
         </form>
 
-        <div id="lista-roteiro">
-            <p>Carregando roteiro...</p>
-        </div>
+        <div id="lista-roteiro"><p>Carregando roteiro...</p></div>
     </section>
 
+    <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
+
+    <!-- PAINEL GLOBAL DE CÂMBIO -->
+    <div class="painel-cambio no-print" id="area-financeira">
+        <strong style="color: #16a085;">💱 Cotação do Dia (Para converter e somar tudo em Reais):</strong>
+        <label>1 Bs (Boliviano) = R$ <input type="number" id="cotacao-bs" value="0.85" step="0.01"></label>
+        <label>1 US$ (Dólar) = R$ <input type="number" id="cotacao-usd" value="5.50" step="0.01"></label>
+    </div>
+
+    <!-- ORÇAMENTO (PLANEJAMENTO) -->
     <section id="orcamento">
         <h2>
-            💰 Orçamento e Despesas
+            📝 Orçamento (Planejado)
             <div class="no-print">
-                <button class="btn-export" id="export-despesas-csv">📥 Baixar Planilha</button>
-                <button class="btn-export" onclick="window.print()">🖨️ Salvar PDF</button>
+                <button class="btn-export" id="export-orcamento-csv">📥 Planilha</button>
+                <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
-        <p class="aviso-nuvem no-print">✅ Sincronização ativada: As alterações feitas aqui aparecem para todos.</p>
+        <p class="aviso-nuvem no-print">✅ Planejem aqui os custos antes da viagem. Sincronizado para todos.</p>
         
-        <form id="form-despesa" class="form-group no-print">
-            <input type="hidden" id="edit-id">
-            <input type="text" id="desc" placeholder="Descrição da despesa" required>
-            <select id="moeda" required>
+        <form id="form-orcamento" class="form-group no-print">
+            <input type="hidden" id="edit-id-orcamento">
+            <input type="text" id="desc-orcamento" placeholder="Descrição do custo estimado" required>
+            <select id="moeda-orcamento" required>
                 <option value="R$">BRL (R$)</option>
                 <option value="Bs">BOB (Bs - Bolivianos)</option>
                 <option value="US$">USD (US$ - Dólar)</option>
             </select>
-            <input type="number" id="valor" placeholder="Valor" step="0.01" required>
-            <input type="text" id="pagador" placeholder="Quem pagou?" required>
-            
-            <input type="text" id="dividido" list="opcoes-divisao" placeholder="Dividido com (Ex: Todos, Só o João)" required>
-            <datalist id="opcoes-divisao">
-                <option value="Individual (Apenas quem pagou)">
-                <option value="Todos do grupo">
-            </datalist>
-            
-            <button type="submit" id="btn-salvar">Adicionar Despesa</button>
+            <input type="number" id="valor-orcamento" placeholder="Valor Estimado" step="0.01" required>
+            <input type="text" id="pagador-orcamento" placeholder="Quem vai pagar?" required>
+            <input type="text" id="dividido-orcamento" list="opcoes-divisao" placeholder="Dividido com?" required>
+            <button type="submit" id="btn-salvar-orcamento">Adicionar ao Orçamento</button>
         </form>
 
         <table>
             <thead>
                 <tr>
-                    <th>Despesa</th>
-                    <th>Valor</th>
+                    <th>Despesa Estimada</th>
+                    <th>Valor (Original)</th>
+                    <th style="background-color: #dff9f3;">Valor em R$</th>
+                    <th>Quem Paga?</th>
+                    <th>Dividido com?</th>
+                    <th class="no-print">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-orcamento">
+                <tr><td colspan="6">Carregando dados...</td></tr>
+            </tbody>
+        </table>
+        <div class="total-box">Total Planejado: R$ <span id="total-orcamento">0.00</span></div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
+
+    <!-- DESPESAS (REALIZADAS) -->
+    <section id="despesas">
+        <h2>
+            💸 Despesas (Realizadas)
+            <div class="no-print">
+                <button class="btn-export" id="export-despesas-csv">📥 Planilha</button>
+                <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
+            </div>
+        </h2>
+        <p class="aviso-nuvem no-print">✅ Lancem aqui os gastos REAIS durante a viagem.</p>
+        
+        <form id="form-despesa" class="form-group no-print">
+            <input type="hidden" id="edit-id-despesa">
+            <input type="text" id="desc-despesa" placeholder="O que foi pago na viagem?" required>
+            <select id="moeda-despesa" required>
+                <option value="R$">BRL (R$)</option>
+                <option value="Bs">BOB (Bs - Bolivianos)</option>
+                <option value="US$">USD (US$ - Dólar)</option>
+            </select>
+            <input type="number" id="valor-despesa" placeholder="Valor Real" step="0.01" required>
+            <input type="text" id="pagador-despesa" placeholder="Quem pagou?" required>
+            <input type="text" id="dividido-despesa" list="opcoes-divisao" placeholder="Dividido com?" required>
+            <datalist id="opcoes-divisao">
+                <option value="Individual (Apenas quem pagou)">
+                <option value="Todos do grupo">
+            </datalist>
+            
+            <button type="submit" id="btn-salvar-despesa">Adicionar Despesa Real</button>
+        </form>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Gasto Realizado</th>
+                    <th>Valor (Original)</th>
+                    <th style="background-color: #fdebd0;">Valor em R$</th>
                     <th>Quem Pagou?</th>
                     <th>Dividido com?</th>
                     <th class="no-print">Ações</th>
                 </tr>
             </thead>
             <tbody id="tabela-despesas">
-                <tr><td colspan="5">Carregando dados...</td></tr>
+                <tr><td colspan="6">Carregando dados...</td></tr>
             </tbody>
         </table>
+        <div class="total-box" style="background: #d35400;">Total Gasto Real: R$ <span id="total-despesa">0.00</span></div>
     </section>
 
+    <!-- MAPAS -->
     <section id="mapas">
         <h2>🗺️ Mapa Interativo</h2>
         <p class="no-print">Navegue pelos pontos do nosso roteiro (adicione novos pontos diretamente no Google My Maps).</p>
@@ -249,6 +334,7 @@
         </div>
     </section>
 
+    <!-- CHECKLIST -->
     <section id="checklist">
         <h2>✅ Checklist de Viagem</h2>
         <p class="aviso-nuvem no-print">✅ Sincronização ativada: Marque os itens e todos verão.</p>
@@ -258,9 +344,7 @@
             <button type="submit">Adicionar Item</button>
         </form>
 
-        <div id="lista-checklist">
-            <p>Carregando checklist...</p>
-        </div>
+        <div id="lista-checklist"><p>Carregando checklist...</p></div>
     </section>
 </div>
 
@@ -268,7 +352,7 @@
     Feito para a melhor viagem de 2027!
 </footer>
 
-<!-- Código Firebase (Módulo) -->
+<!-- Firebase & Scripts -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
@@ -286,8 +370,29 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // Sistema Global de Câmbio
+    const inputCotacaoBs = document.getElementById('cotacao-bs');
+    const inputCotacaoUsd = document.getElementById('cotacao-usd');
+
+    function getCotacoes() {
+        return {
+            bs: parseFloat(inputCotacaoBs.value) || 0,
+            usd: parseFloat(inputCotacaoUsd.value) || 0
+        };
+    }
+
+    function converterParaBRL(valor, moeda) {
+        const cotacoes = getCotacoes();
+        let val = parseFloat(valor);
+        if (moeda === 'Bs') return val * cotacoes.bs;
+        if (moeda === 'US$') return val * cotacoes.usd;
+        return val;
+    }
+
+    // Variáveis para guardar dados do banco e exportar CSV
     let dadosRoteiroCSV = [];
-    let dadosDespesasCSV = [];
+    let dadosOrcamentoDB = {};
+    let dadosDespesasDB = {};
 
     function exportarCSV(nomeArquivo, cabecalhos, linhas) {
         let csvContent = "data:text/csv;charset=utf-8," + cabecalhos.join(",") + "\n";
@@ -320,7 +425,6 @@
             roteiroArray.forEach(item => {
                 const partesData = item.data.split('-');
                 const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
-                
                 dadosRoteiroCSV.push([dataFormatada, item.hora, item.desc]);
 
                 const div = document.createElement('div');
@@ -381,88 +485,176 @@
     });
 
     // ==========================================
-    // ORÇAMENTO
+    // FUNÇÕES DE TABELA FINANCEIRA
     // ==========================================
-    const despesasRef = ref(db, 'despesas');
-    onValue(despesasRef, (snapshot) => {
-        const tabela = document.getElementById('tabela-despesas');
+    function renderTabelaFinanceira(dados, idTabela, idTotal, colorBackground) {
+        const tabela = document.getElementById(idTabela);
         tabela.innerHTML = '';
-        dadosDespesasCSV = [];
-        const data = snapshot.val();
+        let totalReais = 0;
+        let linhasCSV = [];
 
-        if (data) {
-            Object.keys(data).forEach(key => {
-                const d = data[key];
-                dadosDespesasCSV.push([d.desc, d.moeda, parseFloat(d.valor).toFixed(2), d.pagador, d.dividido]);
+        if (dados) {
+            Object.keys(dados).forEach(key => {
+                const d = dados[key];
+                const valorConvertido = converterParaBRL(d.valor, d.moeda);
+                totalReais += valorConvertido;
+                
+                linhasCSV.push([d.desc, d.moeda, parseFloat(d.valor).toFixed(2), `R$ ${valorConvertido.toFixed(2)}`, d.pagador, d.dividido]);
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${d.desc}</td>
                     <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
+                    <td style="background-color: ${colorBackground};"><strong>R$ ${valorConvertido.toFixed(2)}</strong></td>
                     <td>${d.pagador}</td>
                     <td>${d.dividido}</td>
                     <td class="no-print">
-                        <button class="btn-edit btn-edit-despesa" data-id="${key}">Editar</button>
-                        <button class="btn-delete btn-delete-despesa" data-id="${key}">Excluir</button>
+                        <button class="btn-edit btn-edit-${idTabela}" data-id="${key}">Editar</button>
+                        <button class="btn-delete btn-delete-${idTabela}" data-id="${key}">Excluir</button>
                     </td>
                 `;
                 tabela.appendChild(tr);
             });
-
-            document.querySelectorAll('.btn-delete-despesa').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    if(confirm("Excluir esta despesa?")) remove(ref(db, 'despesas/' + e.target.getAttribute('data-id')));
-                });
-            });
-            document.querySelectorAll('.btn-edit-despesa').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.target.getAttribute('data-id');
-                    document.getElementById('desc').value = data[id].desc;
-                    document.getElementById('moeda').value = data[id].moeda;
-                    document.getElementById('valor').value = data[id].valor;
-                    document.getElementById('pagador').value = data[id].pagador;
-                    document.getElementById('dividido').value = data[id].dividido;
-                    document.getElementById('edit-id').value = id;
-                    document.getElementById('btn-salvar').textContent = "Atualizar";
-                });
-            });
+            document.getElementById(idTotal).innerText = totalReais.toFixed(2);
         } else {
-            tabela.innerHTML = '<tr><td colspan="5">Nenhuma despesa cadastrada.</td></tr>';
+            tabela.innerHTML = '<tr><td colspan="6">Nenhum registro encontrado.</td></tr>';
+            document.getElementById(idTotal).innerText = '0.00';
         }
+        return linhasCSV;
+    }
+
+    // ==========================================
+    // ORÇAMENTO (PLANEJAMENTO)
+    // ==========================================
+    const orcamentoRef = ref(db, 'orcamento');
+    let csvOrcamento = [];
+    
+    onValue(orcamentoRef, (snapshot) => {
+        dadosOrcamentoDB = snapshot.val() || null;
+        atualizarVisualOrcamento();
     });
+
+    function atualizarVisualOrcamento() {
+        csvOrcamento = renderTabelaFinanceira(dadosOrcamentoDB, 'tabela-orcamento', 'total-orcamento', '#dff9f3');
+        
+        document.querySelectorAll('.btn-delete-tabela-orcamento').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if(confirm("Excluir este item do orçamento?")) remove(ref(db, 'orcamento/' + e.target.getAttribute('data-id')));
+            });
+        });
+        document.querySelectorAll('.btn-edit-tabela-orcamento').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const d = dadosOrcamentoDB[id];
+                document.getElementById('desc-orcamento').value = d.desc;
+                document.getElementById('moeda-orcamento').value = d.moeda;
+                document.getElementById('valor-orcamento').value = d.valor;
+                document.getElementById('pagador-orcamento').value = d.pagador;
+                document.getElementById('dividido-orcamento').value = d.dividido;
+                document.getElementById('edit-id-orcamento').value = id;
+                document.getElementById('btn-salvar-orcamento').textContent = "Atualizar Orçamento";
+            });
+        });
+    }
+
+    document.getElementById('form-orcamento').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const novoItem = {
+            desc: document.getElementById('desc-orcamento').value,
+            moeda: document.getElementById('moeda-orcamento').value,
+            valor: document.getElementById('valor-orcamento').value,
+            pagador: document.getElementById('pagador-orcamento').value,
+            dividido: document.getElementById('dividido-orcamento').value
+        };
+        const editKey = document.getElementById('edit-id-orcamento').value;
+        if (editKey) {
+            update(ref(db, 'orcamento/' + editKey), novoItem);
+            document.getElementById('btn-salvar-orcamento').textContent = "Adicionar ao Orçamento";
+        } else {
+            push(orcamentoRef, novoItem);
+        }
+        document.getElementById('form-orcamento').reset();
+        document.getElementById('edit-id-orcamento').value = '';
+    });
+
+    document.getElementById('export-orcamento-csv').addEventListener('click', () => {
+        exportarCSV("Orcamento_Planejado_LaPaz.csv", ["Descrição", "Moeda Original", "Valor Original", "Valor em R$", "Quem Paga", "Dividido Com"], csvOrcamento);
+    });
+
+    // ==========================================
+    // DESPESAS (REALIZADAS)
+    // ==========================================
+    const despesasRef = ref(db, 'despesas');
+    let csvDespesas = [];
+
+    onValue(despesasRef, (snapshot) => {
+        dadosDespesasDB = snapshot.val() || null;
+        atualizarVisualDespesas();
+    });
+
+    function atualizarVisualDespesas() {
+        csvDespesas = renderTabelaFinanceira(dadosDespesasDB, 'tabela-despesas', 'total-despesa', '#fdebd0');
+        
+        document.querySelectorAll('.btn-delete-tabela-despesas').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if(confirm("Excluir esta despesa real?")) remove(ref(db, 'despesas/' + e.target.getAttribute('data-id')));
+            });
+        });
+        document.querySelectorAll('.btn-edit-tabela-despesas').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const d = dadosDespesasDB[id];
+                document.getElementById('desc-despesa').value = d.desc;
+                document.getElementById('moeda-despesa').value = d.moeda;
+                document.getElementById('valor-despesa').value = d.valor;
+                document.getElementById('pagador-despesa').value = d.pagador;
+                document.getElementById('dividido-despesa').value = d.dividido;
+                document.getElementById('edit-id-despesa').value = id;
+                document.getElementById('btn-salvar-despesa').textContent = "Atualizar Despesa";
+            });
+        });
+    }
 
     document.getElementById('form-despesa').addEventListener('submit', (e) => {
         e.preventDefault();
         const novaDespesa = {
-            desc: document.getElementById('desc').value,
-            moeda: document.getElementById('moeda').value,
-            valor: document.getElementById('valor').value,
-            pagador: document.getElementById('pagador').value,
-            dividido: document.getElementById('dividido').value
+            desc: document.getElementById('desc-despesa').value,
+            moeda: document.getElementById('moeda-despesa').value,
+            valor: document.getElementById('valor-despesa').value,
+            pagador: document.getElementById('pagador-despesa').value,
+            dividido: document.getElementById('dividido-despesa').value
         };
-        const editKey = document.getElementById('edit-id').value;
+        const editKey = document.getElementById('edit-id-despesa').value;
         if (editKey) {
             update(ref(db, 'despesas/' + editKey), novaDespesa);
-            document.getElementById('btn-salvar').textContent = "Adicionar Despesa";
+            document.getElementById('btn-salvar-despesa').textContent = "Adicionar Despesa Real";
         } else {
             push(despesasRef, novaDespesa);
         }
         document.getElementById('form-despesa').reset();
-        document.getElementById('edit-id').value = '';
+        document.getElementById('edit-id-despesa').value = '';
     });
 
     document.getElementById('export-despesas-csv').addEventListener('click', () => {
-        exportarCSV("Despesas_LaPaz_2027.csv", ["Descrição", "Moeda", "Valor", "Quem Pagou", "Dividido Com"], dadosDespesasCSV);
+        exportarCSV("Despesas_Reais_LaPaz.csv", ["Descrição", "Moeda Original", "Valor Original", "Valor em R$", "Quem Pagou", "Dividido Com"], csvDespesas);
+    });
+
+    // ATUALIZAR TOTALIZADORES QUANDO O CÂMBIO MUDAR NA TELA
+    inputCotacaoBs.addEventListener('input', () => {
+        atualizarVisualOrcamento();
+        atualizarVisualDespesas();
+    });
+    inputCotacaoUsd.addEventListener('input', () => {
+        atualizarVisualOrcamento();
+        atualizarVisualDespesas();
     });
 
     // ==========================================
     // CHECKLIST INTERATIVO
     // ==========================================
     const checklistRef = ref(db, 'checklist');
-    const formChecklist = document.getElementById('form-checklist');
-    const listaChecklist = document.getElementById('lista-checklist');
-
     onValue(checklistRef, (snapshot) => {
+        const listaChecklist = document.getElementById('lista-checklist');
         listaChecklist.innerHTML = '';
         const data = snapshot.val();
         
@@ -488,9 +680,7 @@
 
             listaChecklist.querySelectorAll('.btn-delete').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    if(confirm("Excluir item do checklist?")) {
-                        remove(ref(db, 'checklist/' + e.target.getAttribute('data-id')));
-                    }
+                    if(confirm("Excluir item do checklist?")) remove(ref(db, 'checklist/' + e.target.getAttribute('data-id')));
                 });
             });
         } else {
@@ -498,14 +688,10 @@
         }
     });
 
-    formChecklist.addEventListener('submit', (e) => {
+    document.getElementById('form-checklist').addEventListener('submit', (e) => {
         e.preventDefault();
-        const novoItem = {
-            desc: document.getElementById('desc-checklist').value,
-            concluido: false
-        };
-        push(checklistRef, novoItem);
-        formChecklist.reset();
+        push(checklistRef, { desc: document.getElementById('desc-checklist').value, concluido: false });
+        document.getElementById('form-checklist').reset();
     });
 
 </script>
