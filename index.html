@@ -136,6 +136,30 @@
         .btn-link-roteiro:hover {
             background-color: #2980b9;
         }
+        .box-drive {
+            background-color: #f8f9fa;
+            border: 2px dashed #3498db;
+            padding: 25px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .btn-drive-action {
+            display: inline-block;
+            margin: 8px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .btn-upload-forms { background-color: #8e44ad; }
+        .btn-upload-forms:hover { background-color: #732d91; }
+        .btn-view-folder { background-color: #27ae60; }
+        .btn-view-folder:hover { background-color: #219150; }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -230,7 +254,7 @@
             font-size: 0.9rem;
         }
         @media print {
-            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio { display: none !important; }
+            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio, .box-drive { display: none !important; }
             body { background-color: white; }
             .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
             section { margin-bottom: 30px; page-break-inside: avoid; }
@@ -246,6 +270,7 @@
 
 <nav>
     <a href="#roteiro">Roteiro</a>
+    <a href="#documentos">Documentos / Ingressos</a>
     <a href="#participantes">Participantes</a>
     <a href="#orcamento">Orçamento</a>
     <a href="#despesas">Despesas Reais</a>
@@ -271,11 +296,30 @@
             <input type="date" id="data-roteiro" required>
             <input type="time" id="hora-roteiro" required>
             <input type="text" id="desc-roteiro" placeholder="Ex: Ônibus Transacreana para Brasiléia" required style="flex: 2; min-width: 200px;">
-            <input type="url" id="link-roteiro" placeholder="Link / Reserva (opcional - https://...)" style="flex: 2; min-width: 200px;">
+            <input type="url" id="link-roteiro" placeholder="Link / Reserva / Ingresso (opcional - https://...)" style="flex: 2; min-width: 200px;">
             <button type="submit" id="btn-salvar-roteiro">Adicionar Atividade</button>
         </form>
 
         <div id="lista-roteiro"><p>Carregando roteiro...</p></div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
+
+    <!-- DOCUMENTOS E INGRESSOS (GOOGLE FORMS & DRIVE) -->
+    <section id="documentos">
+        <h2>📁 Documentos e Ingressos (Drive)</h2>
+        <div class="box-drive no-print">
+            <h3 style="margin-top: 0; color: #2c3e50;">Central de Arquivos da Viagem</h3>
+            <p style="color: #666; max-width: 650px; margin: 0 auto 15px;">Envie passagens de ônibus, reservas de hospedagem, comprovantes de vacina e fotos de ingressos para a nossa pasta compartilhada.</p>
+            
+            <!-- COLOQUE SEUS LINKS DO FORMS E DA PASTA DO DRIVE ABAIXO -->
+            <a href="https://forms.gle/UMnDRs7mTN4GGZ798" id="link-forms-upload" target="_blank" rel="noopener noreferrer" class="btn-drive-action btn-upload-forms">
+                📤 Enviar Novo Arquivo (PDF / Foto)
+            </a>
+            <a href="https://drive.google.com/drive/folders/1T-wQNLgiY4QefRaRk74wl5k4e3ipAgSPI2EoaEh3N6ZdiLsjYgMKopGIowkEnoaROoUsEAzU?usp=sharing" id="link-drive-folder" target="_blank" rel="noopener noreferrer" class="btn-drive-action btn-view-folder">
+                📂 Abrir Pasta de Documentos no Drive
+            </a>
+        </div>
     </section>
 
     <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
@@ -565,7 +609,7 @@
     }
 
     // ==========================================
-    // ROTEIRO (Com suporte a Links)
+    // ROTEIRO (Com Links)
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
@@ -836,7 +880,7 @@
         exportarCSV("Despesas_Reais_LaPaz.csv", ["Descrição", "Moeda Original", "Valor Original", "Valor em R$", "Quem Pagou", "Dividido Com"], csvDespesas);
     });
 
-    // ATUALIZAR TOTALIZADORES QUANDO O CÂMBIO MUDAR NA TELA
+    // ATUALIZAR TOTALIZADORES AO MUDAR CÂMBIO
     inputCotacaoBs.addEventListener('input', () => { atualizarVisualOrcamento(); atualizarVisualDespesas(); });
     inputCotacaoUsd.addEventListener('input', () => { atualizarVisualOrcamento(); atualizarVisualDespesas(); });
 
