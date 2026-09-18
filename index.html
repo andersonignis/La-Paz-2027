@@ -80,7 +80,7 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             flex: 1;
-            min-width: 120px;
+            min-width: 130px;
         }
         .checkbox-group {
             display: flex;
@@ -310,13 +310,12 @@
         <h2>📁 Documentos e Ingressos (Drive)</h2>
         <div class="box-drive no-print">
             <h3 style="margin-top: 0; color: #2c3e50;">Central de Arquivos da Viagem</h3>
-            <p style="color: #666; max-width: 650px; margin: 0 auto 15px;">Envie passagens de ônibus, reservas de hospedagem, comprovantes de vacina e fotos de ingressos para a nossa pasta compartilhada.</p>
+            <p style="color: #666; max-width: 650px; margin: 0 auto 15px;">Envie passagens de ônibus, reservas de hospedagem, comprovantes e fotos de ingressos para a nossa pasta compartilhada.</p>
             
-            <!-- COLOQUE SEUS LINKS DO FORMS E DA PASTA DO DRIVE ABAIXO -->
-            <a href="https://forms.gle/UMnDRs7mTN4GGZ798" id="link-forms-upload" target="_blank" rel="noopener noreferrer" class="btn-drive-action btn-upload-forms">
+            <a href="COLE_AQUI_O_LINK_DO_SEU_GOOGLE_FORMS" id="link-forms-upload" target="_blank" rel="noopener noreferrer" class="btn-drive-action btn-upload-forms">
                 📤 Enviar Novo Arquivo (PDF / Foto)
             </a>
-            <a href="https://drive.google.com/drive/folders/1T-wQNLgiY4QefRaRk74wl5k4e3ipAgSPI2EoaEh3N6ZdiLsjYgMKopGIowkEnoaROoUsEAzU?usp=sharing" id="link-drive-folder" target="_blank" rel="noopener noreferrer" class="btn-drive-action btn-view-folder">
+            <a href="COLE_AQUI_O_LINK_DA_SUA_PASTA_DO_DRIVE" id="link-drive-folder" target="_blank" rel="noopener noreferrer" class="btn-drive-action btn-view-folder">
                 📂 Abrir Pasta de Documentos no Drive
             </a>
         </div>
@@ -327,7 +326,7 @@
     <!-- PARTICIPANTES -->
     <section id="participantes">
         <h2>👥 Participantes da Viagem</h2>
-        <p class="aviso-nuvem no-print">✅ Adicione quem vai na viagem. Os nomes aparecerão nas opções de despesas.</p>
+        <p class="aviso-nuvem no-print">✅ Adicione quem vai na viagem. Os nomes aparecerão nas opções de divisão.</p>
         
         <form id="form-participante" class="form-group no-print">
             <input type="text" id="nome-participante" placeholder="Nome do participante (Ex: Anderson)" required>
@@ -357,23 +356,36 @@
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
+        <p class="aviso-nuvem no-print">✅ Selecione a atividade do roteiro, o dia, valor e defina se é custo dividido ou individual.</p>
         
         <form id="form-orcamento" class="form-group no-print">
             <input type="hidden" id="edit-id-orcamento">
-            <input type="text" id="desc-orcamento" placeholder="Descrição do custo estimado" required>
-            <select id="moeda-orcamento" required>
+            
+            <!-- Seleção rápida vinculada ao Roteiro -->
+            <select id="select-roteiro-orcamento" style="flex: 2; min-width: 220px;">
+                <option value="">Selecione uma atividade do Roteiro (ou digite abaixo)</option>
+            </select>
+            
+            <input type="text" id="desc-orcamento" placeholder="Nome da Atividade / Item" required style="flex: 2; min-width: 200px;">
+            <input type="date" id="data-orcamento" required title="Dia da atividade">
+            
+            <select id="moeda-orcamento" required style="flex: 0.8; min-width: 90px;">
                 <option value="R$">BRL (R$)</option>
                 <option value="Bs">BOB (Bs - Bolivianos)</option>
                 <option value="US$">USD (US$ - Dólar)</option>
             </select>
-            <input type="number" id="valor-orcamento" placeholder="Valor Estimado" step="0.01" required>
             
-            <select id="pagador-orcamento" required>
-                <option value="" disabled selected>Quem vai pagar?</option>
+            <input type="number" id="valor-orcamento" placeholder="Valor Estimado" step="0.01" required style="flex: 1; min-width: 120px;">
+            
+            <select id="tipo-custo-orcamento" required style="flex: 1; min-width: 160px;">
+                <option value="Dividido">Dividido entre membros</option>
+                <option value="Individual">Individual (por pessoa)</option>
             </select>
             
             <div style="width: 100%; margin-top: 5px;">
-                <span style="font-size: 0.9rem; color: #555; font-weight: bold;">Dividido com quem? (Marque as opções):</span>
+                <span id="label-membros-orcamento" style="font-size: 0.9rem; color: #555; font-weight: bold;">
+                    Quem participará / dividirá este custo?
+                </span>
                 <div id="divisao-orcamento-container" class="checkbox-group"></div>
             </div>
             
@@ -383,11 +395,11 @@
         <table>
             <thead>
                 <tr>
-                    <th>Despesa Estimada</th>
-                    <th>Valor (Original)</th>
+                    <th>Atividade & Dia</th>
+                    <th>Valor Original</th>
                     <th style="background-color: #dff9f3;">Valor em R$</th>
-                    <th>Quem Paga?</th>
-                    <th>Dividido com?</th>
+                    <th>Tipo</th>
+                    <th>Participantes / Divisão</th>
                     <th class="no-print">Ações</th>
                 </tr>
             </thead>
@@ -409,18 +421,19 @@
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
+        <p class="aviso-nuvem no-print">✅ Lance aqui os gastos pagos durante a viagem.</p>
         
         <form id="form-despesa" class="form-group no-print">
             <input type="hidden" id="edit-id-despesa">
-            <input type="text" id="desc-despesa" placeholder="O que foi pago na viagem?" required>
-            <select id="moeda-despesa" required>
+            <input type="text" id="desc-despesa" placeholder="O que foi pago na viagem?" required style="flex: 2; min-width: 180px;">
+            <select id="moeda-despesa" required style="flex: 0.8; min-width: 90px;">
                 <option value="R$">BRL (R$)</option>
                 <option value="Bs">BOB (Bs - Bolivianos)</option>
                 <option value="US$">USD (US$ - Dólar)</option>
             </select>
-            <input type="number" id="valor-despesa" placeholder="Valor Real" step="0.01" required>
+            <input type="number" id="valor-despesa" placeholder="Valor Real" step="0.01" required style="flex: 1; min-width: 110px;">
             
-            <select id="pagador-despesa" required>
+            <select id="pagador-despesa" required style="flex: 1.2; min-width: 140px;">
                 <option value="" disabled selected>Quem pagou?</option>
             </select>
             
@@ -436,7 +449,7 @@
             <thead>
                 <tr>
                     <th>Gasto Realizado</th>
-                    <th>Valor (Original)</th>
+                    <th>Valor Original</th>
                     <th style="background-color: #fdebd0;">Valor em R$</th>
                     <th>Quem Pagou?</th>
                     <th>Dividido com?</th>
@@ -510,7 +523,6 @@
         const containerHtml = document.getElementById('lista-participantes');
         containerHtml.innerHTML = '';
         
-        const pagadorOrcamento = document.getElementById('pagador-orcamento');
         const pagadorDespesa = document.getElementById('pagador-despesa');
         let optionsHtml = '<option value="" disabled selected>Quem pagou?</option>';
         
@@ -528,10 +540,9 @@
                 checkboxesHtml += `<label><input type="checkbox" value="${nome}"> ${nome}</label>`;
             });
         } else {
-            containerHtml.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Adicione os participantes acima para liberar as divisões de despesas.</p>';
+            containerHtml.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Adicione os participantes acima para liberar as opções de divisão.</p>';
         }
 
-        pagadorOrcamento.innerHTML = optionsHtml;
         pagadorDespesa.innerHTML = optionsHtml;
         divOrcamento.innerHTML = checkboxesHtml;
         divDespesa.innerHTML = checkboxesHtml;
@@ -545,7 +556,7 @@
     });
 
     // ==========================================
-    // FUNÇÕES AUXILIARES (Checkboxes de divisão)
+    // FUNÇÕES AUXILIARES (Checkboxes)
     // ==========================================
     function obterDivisaoSelecionada(containerId) {
         const container = document.getElementById(containerId);
@@ -609,16 +620,22 @@
     }
 
     // ==========================================
-    // ROTEIRO (Com Links)
+    // ROTEIRO (Com Links e sincronização com Orçamento)
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
+    let roteiroCache = {};
     
     onValue(roteiroRef, (snapshot) => {
         document.getElementById('lista-roteiro').innerHTML = '';
         dadosRoteiroCSV = [];
         const data = snapshot.val();
+        roteiroCache = data || {};
         
+        // Atualiza o seletor de atividades no Orçamento
+        const selectRoteiro = document.getElementById('select-roteiro-orcamento');
+        selectRoteiro.innerHTML = '<option value="">Selecione uma atividade do Roteiro (ou digite abaixo)</option>';
+
         if (data) {
             const roteiroArray = Object.keys(data).map(key => ({ id: key, ...data[key] }));
             roteiroArray.sort((a, b) => new Date(`${a.data}T${a.hora}`) - new Date(`${b.data}T${b.hora}`));
@@ -628,6 +645,9 @@
                 const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
                 const linkUrl = item.link ? item.link.trim() : '';
                 
+                // Alimenta o select do orçamento
+                selectRoteiro.innerHTML += `<option value="${item.id}" data-desc="${item.desc}" data-data="${item.data}">[${dataFormatada}] ${item.desc}</option>`;
+
                 dadosRoteiroCSV.push([dataFormatada, item.hora, item.desc, linkUrl]);
 
                 const div = document.createElement('div');
@@ -674,6 +694,15 @@
         }
     });
 
+    // Ao selecionar uma atividade no seletor de orçamento, preenche os campos automaticamente
+    document.getElementById('select-roteiro-orcamento').addEventListener('change', (e) => {
+        const id = e.target.value;
+        if(id && roteiroCache[id]) {
+            document.getElementById('desc-orcamento').value = roteiroCache[id].desc;
+            document.getElementById('data-orcamento').value = roteiroCache[id].data;
+        }
+    });
+
     document.getElementById('form-roteiro').addEventListener('submit', (e) => {
         e.preventDefault();
         const novaAtividade = {
@@ -698,46 +727,7 @@
     });
 
     // ==========================================
-    // FUNÇÕES DE TABELA FINANCEIRA
-    // ==========================================
-    function renderTabelaFinanceira(dados, idTabela, idTotal, colorBackground) {
-        const tabela = document.getElementById(idTabela);
-        tabela.innerHTML = '';
-        let totalReais = 0;
-        let linhasCSV = [];
-
-        if (dados) {
-            Object.keys(dados).forEach(key => {
-                const d = dados[key];
-                const valorConvertido = converterParaBRL(d.valor, d.moeda);
-                totalReais += valorConvertido;
-                
-                linhasCSV.push([d.desc, d.moeda, parseFloat(d.valor).toFixed(2), `R$ ${valorConvertido.toFixed(2)}`, d.pagador, d.dividido]);
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${d.desc}</td>
-                    <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
-                    <td style="background-color: ${colorBackground};"><strong>R$ ${valorConvertido.toFixed(2)}</strong></td>
-                    <td>${d.pagador}</td>
-                    <td>${d.dividido}</td>
-                    <td class="no-print">
-                        <button class="btn-edit btn-edit-${idTabela}" data-id="${key}">Editar</button>
-                        <button class="btn-delete btn-delete-${idTabela}" data-id="${key}">Excluir</button>
-                    </td>
-                `;
-                tabela.appendChild(tr);
-            });
-            document.getElementById(idTotal).innerText = totalReais.toFixed(2);
-        } else {
-            tabela.innerHTML = '<tr><td colspan="6">Nenhum registro encontrado.</td></tr>';
-            document.getElementById(idTotal).innerText = '0.00';
-        }
-        return linhasCSV;
-    }
-
-    // ==========================================
-    // ORÇAMENTO (PLANEJAMENTO)
+    // ORÇAMENTO (PLANEJADO - Sem "Quem pagou")
     // ==========================================
     const orcamentoRef = ref(db, 'orcamento');
     let dadosOrcamentoDB = {};
@@ -749,7 +739,47 @@
     });
 
     function atualizarVisualOrcamento() {
-        csvOrcamento = renderTabelaFinanceira(dadosOrcamentoDB, 'tabela-orcamento', 'total-orcamento', '#dff9f3');
+        const tabela = document.getElementById('tabela-orcamento');
+        tabela.innerHTML = '';
+        let totalReais = 0;
+        csvOrcamento = [];
+
+        if (dadosOrcamentoDB) {
+            Object.keys(dadosOrcamentoDB).forEach(key => {
+                const d = dadosOrcamentoDB[key];
+                const valorConvertido = converterParaBRL(d.valor, d.moeda);
+                totalReais += valorConvertido;
+                
+                let dataFormatada = "";
+                if (d.data) {
+                    const partes = d.data.split('-');
+                    dataFormatada = ` (${partes[2]}/${partes[1]}/${partes[0]})`;
+                }
+
+                const tipoLabel = d.tipo || "Dividido";
+                const membrosLabel = d.dividido || "Todos do grupo";
+
+                csvOrcamento.push([`${d.desc}${dataFormatada}`, d.moeda, parseFloat(d.valor).toFixed(2), `R$ ${valorConvertido.toFixed(2)}`, tipoLabel, membrosLabel]);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${d.desc}</strong><br><small style="color: #666;">📅 ${d.data ? d.data.split('-').reverse().join('/') : 'Data não informada'}</small></td>
+                    <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
+                    <td style="background-color: #dff9f3;"><strong>R$ ${valorConvertido.toFixed(2)}</strong></td>
+                    <td><span style="font-size: 0.85rem; padding: 3px 8px; border-radius: 12px; background: ${tipoLabel === 'Individual' ? '#f39c12' : '#3498db'}; color: white;">${tipoLabel}</span></td>
+                    <td>${membrosLabel}</td>
+                    <td class="no-print">
+                        <button class="btn-edit btn-edit-tabela-orcamento" data-id="${key}">Editar</button>
+                        <button class="btn-delete btn-delete-tabela-orcamento" data-id="${key}">Excluir</button>
+                    </td>
+                `;
+                tabela.appendChild(tr);
+            });
+            document.getElementById('total-orcamento').innerText = totalReais.toFixed(2);
+        } else {
+            tabela.innerHTML = '<tr><td colspan="6">Nenhum item orçado até o momento.</td></tr>';
+            document.getElementById('total-orcamento').innerText = '0.00';
+        }
         
         document.querySelectorAll('.btn-delete-tabela-orcamento').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -761,16 +791,18 @@
                 const id = e.target.getAttribute('data-id');
                 const d = dadosOrcamentoDB[id];
                 document.getElementById('desc-orcamento').value = d.desc;
+                document.getElementById('data-orcamento').value = d.data || '';
                 document.getElementById('moeda-orcamento').value = d.moeda;
                 document.getElementById('valor-orcamento').value = d.valor;
+                document.getElementById('tipo-custo-orcamento').value = d.tipo || "Dividido";
                 
                 setTimeout(() => {
-                    document.getElementById('pagador-orcamento').value = d.pagador;
                     setarDivisaoSelecionada('divisao-orcamento-container', d.dividido);
                 }, 100);
                 
                 document.getElementById('edit-id-orcamento').value = id;
                 document.getElementById('btn-salvar-orcamento').textContent = "Atualizar Orçamento";
+                window.scrollTo(0, document.getElementById('orcamento').offsetTop);
             });
         });
     }
@@ -780,17 +812,19 @@
         
         const divisao = obterDivisaoSelecionada('divisao-orcamento-container');
         if(divisao === "Não informado") {
-            alert("Por favor, marque com quem essa despesa será dividida.");
+            alert("Por favor, selecione quem participará / dividirá este custo.");
             return;
         }
 
         const novoItem = {
             desc: document.getElementById('desc-orcamento').value,
+            data: document.getElementById('data-orcamento').value,
             moeda: document.getElementById('moeda-orcamento').value,
             valor: document.getElementById('valor-orcamento').value,
-            pagador: document.getElementById('pagador-orcamento').value,
+            tipo: document.getElementById('tipo-custo-orcamento').value,
             dividido: divisao
         };
+        
         const editKey = document.getElementById('edit-id-orcamento').value;
         if (editKey) {
             update(ref(db, 'orcamento/' + editKey), novoItem);
@@ -801,11 +835,12 @@
         
         document.getElementById('form-orcamento').reset();
         document.getElementById('edit-id-orcamento').value = '';
+        document.getElementById('select-roteiro-orcamento').value = '';
         setarDivisaoSelecionada('divisao-orcamento-container', '');
     });
 
     document.getElementById('export-orcamento-csv').addEventListener('click', () => {
-        exportarCSV("Orcamento_Planejado_LaPaz.csv", ["Descrição", "Moeda Original", "Valor Original", "Valor em R$", "Quem Paga", "Dividido Com"], csvOrcamento);
+        exportarCSV("Orcamento_Planejado_LaPaz.csv", ["Atividade & Data", "Moeda Original", "Valor Original", "Valor em R$", "Tipo de Custo", "Participantes / Divisão"], csvOrcamento);
     });
 
     // ==========================================
@@ -821,7 +856,38 @@
     });
 
     function atualizarVisualDespesas() {
-        csvDespesas = renderTabelaFinanceira(dadosDespesasDB, 'tabela-despesas', 'total-despesa', '#fdebd0');
+        const tabela = document.getElementById('tabela-despesas');
+        tabela.innerHTML = '';
+        let totalReais = 0;
+        csvDespesas = [];
+
+        if (dadosDespesasDB) {
+            Object.keys(dadosDespesasDB).forEach(key => {
+                const d = dadosDespesasDB[key];
+                const valorConvertido = converterParaBRL(d.valor, d.moeda);
+                totalReais += valorConvertido;
+                
+                csvDespesas.push([d.desc, d.moeda, parseFloat(d.valor).toFixed(2), `R$ ${valorConvertido.toFixed(2)}`, d.pagador, d.dividido]);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${d.desc}</td>
+                    <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
+                    <td style="background-color: #fdebd0;"><strong>R$ ${valorConvertido.toFixed(2)}</strong></td>
+                    <td><strong>${d.pagador}</strong></td>
+                    <td>${d.dividido}</td>
+                    <td class="no-print">
+                        <button class="btn-edit btn-edit-tabela-despesas" data-id="${key}">Editar</button>
+                        <button class="btn-delete btn-delete-tabela-despesas" data-id="${key}">Excluir</button>
+                    </td>
+                `;
+                tabela.appendChild(tr);
+            });
+            document.getElementById('total-despesa').innerText = totalReais.toFixed(2);
+        } else {
+            tabela.innerHTML = '<tr><td colspan="6">Nenhum registro de gasto real efetuado.</td></tr>';
+            document.getElementById('total-despesa').innerText = '0.00';
+        }
         
         document.querySelectorAll('.btn-delete-tabela-despesas').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -843,6 +909,7 @@
 
                 document.getElementById('edit-id-despesa').value = id;
                 document.getElementById('btn-salvar-despesa').textContent = "Atualizar Despesa";
+                window.scrollTo(0, document.getElementById('despesas').offsetTop);
             });
         });
     }
