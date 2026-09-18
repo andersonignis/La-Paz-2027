@@ -1,17 +1,317 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planejador de Viagem - La Paz 2027</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #34495e;
+            padding: 10px;
+            flex-wrap: wrap;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 5px 15px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        nav a:hover {
+            color: #1abc9c;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2980b9;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 5px;
+        }
+        .highlight {
+            background-color: #e8f8f5;
+            padding: 10px;
+            border-left: 4px solid #1abc9c;
+            margin: 10px 0;
+        }
+        .form-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .form-group input, .form-group select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 120px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #2ecc71;
+        }
+        .btn-edit { background-color: #f39c12; margin-right: 5px;}
+        .btn-edit:hover { background-color: #f1c40f; }
+        .btn-delete { background-color: #c0392b; }
+        .btn-delete:hover { background-color: #e74c3c; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #ecf0f1;
+        }
+        .aviso-nuvem {
+            font-size: 0.85rem;
+            color: #27ae60;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCteFGVFOBDt_yMUZUCqS0RJ5hfF2A-Yoc",
-  authDomain: "la-paz-2027-36647.firebaseapp.com",
-  projectId: "la-paz-2027-36647",
-  storageBucket: "la-paz-2027-36647.firebasestorage.app",
-  messagingSenderId: "788839954070",
-  appId: "1:788839954070:web:8ba90f1a5edfc17695b4b7"
-};
+<header>
+    <h1>La Paz com os Amigos 🇧🇴</h1>
+    <p>Março de 2027 - O grande planejamento</p>
+</header>
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+<nav>
+    <a href="#roteiro">Roteiro</a>
+    <a href="#orcamento">Orçamento</a>
+    <a href="#mapas">Mapas</a>
+    <a href="#checklist">Checklist</a>
+</nav>
+
+<div class="container">
+    <section id="roteiro">
+        <h2>📅 Roteiro da Viagem</h2>
+        <ul>
+            <li><strong>Dia 13/03/2027 (Sábado) - A Partida:</strong>
+                <div class="highlight">
+                    <strong>06:00 - 11:00:</strong> Ônibus da Transacreana saindo da Rodoviária Internacional de Rio Branco com destino ao Terminal Rodoviário de Brasiléia (Duração estimada: 5h).
+                </div>
+                <em>Próximo passo a definir: Travessia da fronteira para Cobija e transporte até La Paz.</em>
+            </li>
+            <li><strong>Dias Seguintes:</strong> Aclimatação à altitude (3.640m), passeios no Teleférico, Mercado das Bruxas, etc.</li>
+        </ul>
+    </section>
+
+    <section id="orcamento">
+        <h2>💰 Orçamento e Despesas</h2>
+        <p class="aviso-nuvem">✅ Sincronização ativada: As alterações feitas aqui aparecem para todos em tempo real.</p>
+        
+        <form id="form-despesa" class="form-group">
+            <input type="hidden" id="edit-id">
+            <input type="text" id="desc" placeholder="Descrição da despesa" required>
+            
+            <select id="moeda" required>
+                <option value="R$">BRL (R$)</option>
+                <option value="Bs">BOB (Bs - Bolivianos)</option>
+                <option value="US$">USD (US$ - Dólar)</option>
+            </select>
+            
+            <input type="number" id="valor" placeholder="Valor" step="0.01" required>
+            <input type="text" id="pagador" placeholder="Quem pagou?" required>
+            
+            <select id="dividido" required>
+                <option value="Não">Individual</option>
+                <option value="Sim">Dividido com o grupo</option>
+            </select>
+            
+            <button type="submit" id="btn-salvar">Adicionar</button>
+        </form>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Despesa</th>
+                    <th>Valor</th>
+                    <th>Quem Pagou?</th>
+                    <th>Dividido?</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-despesas">
+                <tr><td colspan="5">Carregando dados...</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="mapas">
+        <h2>🗺️ Mapas e Localizações</h2>
+        <p>Aqui colocaremos os links e mapas do Google Maps para o hotel, aeroportos, rodoviárias e principais pontos turísticos.</p>
+    </section>
+
+    <section id="checklist">
+        <h2>✅ Checklist de Viagem</h2>
+        <div><input type="checkbox"> Certificado Internacional de Vacinação (Febre Amarela)</div>
+        <div><input type="checkbox"> Passaporte ou RG (com menos de 10 anos de emissão)</div>
+        <div><input type="checkbox"> Remédios para dor de cabeça e enjoo (altitude)</div>
+        <div><input type="checkbox"> Roupas de frio (fleece, corta-vento, luvas)</div>
+    </section>
+</div>
+
+<footer>
+    Feito para a melhor viagem de 2027!
+</footer>
+
+<!-- Código Firebase (Módulo) -->
+<script type="module">
+    // Importações do Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    // Configuração do seu projeto
+    const firebaseConfig = {
+        apiKey: "AIzaSyCteFGVFOBDt_yMUZUCqS0RJ5hfF2A-Yoc",
+        authDomain: "la-paz-2027-36647.firebaseapp.com",
+        projectId: "la-paz-2027-36647",
+        storageBucket: "la-paz-2027-36647.firebasestorage.app",
+        messagingSenderId: "788839954070",
+        appId: "1:788839954070:web:8ba90f1a5edfc17695b4b7",
+        databaseURL: "https://la-paz-2027-36647-default-rtdb.firebaseio.com"
+    };
+
+    // Inicialização
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const despesasRef = ref(db, 'despesas');
+
+    const form = document.getElementById('form-despesa');
+    const tabela = document.getElementById('tabela-despesas');
+    const editIdInput = document.getElementById('edit-id');
+    const btnSalvar = document.getElementById('btn-salvar');
+
+    // Escuta as mudanças no banco de dados em tempo real
+    onValue(despesasRef, (snapshot) => {
+        tabela.innerHTML = '';
+        const data = snapshot.val();
+        
+        if (data) {
+            Object.keys(data).forEach(key => {
+                const d = data[key];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${d.desc}</td>
+                    <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
+                    <td>${d.pagador}</td>
+                    <td>${d.dividido}</td>
+                    <td>
+                        <button class="btn-edit" data-id="${key}">Editar</button>
+                        <button class="btn-delete" data-id="${key}">Excluir</button>
+                    </td>
+                `;
+                tabela.appendChild(tr);
+            });
+
+            // Ações do botão excluir
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    if(confirm("Tem certeza que deseja excluir esta despesa?")) {
+                        remove(ref(db, 'despesas/' + id));
+                    }
+                });
+            });
+
+            // Ações do botão editar
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const despesa = data[id];
+                    
+                    document.getElementById('desc').value = despesa.desc;
+                    document.getElementById('moeda').value = despesa.moeda;
+                    document.getElementById('valor').value = despesa.valor;
+                    document.getElementById('pagador').value = despesa.pagador;
+                    document.getElementById('dividido').value = despesa.dividido;
+                    editIdInput.value = id;
+                    
+                    btnSalvar.textContent = "Atualizar";
+                    document.getElementById('desc').focus();
+                });
+            });
+        } else {
+            tabela.innerHTML = '<tr><td colspan="5">Nenhuma despesa cadastrada ainda.</td></tr>';
+        }
+    });
+
+    // Envio do formulário (Criar ou Atualizar)
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const novaDespesa = {
+            desc: document.getElementById('desc').value,
+            moeda: document.getElementById('moeda').value,
+            valor: document.getElementById('valor').value,
+            pagador: document.getElementById('pagador').value,
+            dividido: document.getElementById('dividido').value
+        };
+
+        const editKey = editIdInput.value;
+        
+        if (editKey) {
+            update(ref(db, 'despesas/' + editKey), novaDespesa);
+            btnSalvar.textContent = "Adicionar";
+        } else {
+            push(despesasRef, novaDespesa);
+        }
+        
+        form.reset();
+        editIdInput.value = '';
+    });
+</script>
+
+</body>
+</html>
