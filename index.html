@@ -541,7 +541,22 @@
                 <tr><td colspan="6">Carregando dados...</td></tr>
             </tbody>
         </table>
-        <div class="total-box" style="background: #d35400;">Total Gasto Real: R$ <span id="total-despesa">0.00</span></div>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; margin-bottom: 25px;">
+    <div style="flex: 1; min-width: 180px; padding: 15px; background: #d35400; color: white; border-radius: 8px; text-align: center;">
+        <span style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold; opacity: 0.9;">Total Gasto Real</span>
+        <div style="font-size: 1.4rem; font-weight: bold; margin-top: 5px;">R$ <span id="total-despesa">0.00</span></div>
+    </div>
+    
+    <div id="card-saldo" style="flex: 1.2; min-width: 220px; padding: 15px; background: #27ae60; color: white; border-radius: 8px; text-align: center;">
+        <span id="label-saldo" style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold; opacity: 0.9;">Saldo Restante (Orçado - Gasto)</span>
+        <div style="font-size: 1.4rem; font-weight: bold; margin-top: 5px;">R$ <span id="valor-saldo">0.00</span></div>
+    </div>
+    
+    <div style="flex: 1; min-width: 180px; padding: 15px; background: #2c3e50; color: white; border-radius: 8px; text-align: center;">
+        <span style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold; opacity: 0.9;">Total Orçado (Meta)</span>
+        <div style="font-size: 1.4rem; font-weight: bold; margin-top: 5px;">R$ <span id="ref-orcamento">0.00</span></div>
+    </div>
+</div>
     </section>
 
     <!-- MAPAS -->
