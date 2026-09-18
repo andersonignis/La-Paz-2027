@@ -51,6 +51,9 @@
             color: #2980b9;
             border-bottom: 2px solid #ecf0f1;
             padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .form-group {
             display: flex;
@@ -78,13 +81,13 @@
             cursor: pointer;
             font-weight: bold;
         }
-        button:hover {
-            background-color: #2ecc71;
-        }
+        button:hover { background-color: #2ecc71; }
         .btn-edit { background-color: #f39c12; margin-right: 5px; padding: 6px 10px; font-size: 0.9em;}
         .btn-edit:hover { background-color: #f1c40f; }
         .btn-delete { background-color: #c0392b; padding: 6px 10px; font-size: 0.9em;}
         .btn-delete:hover { background-color: #e74c3c; }
+        .btn-export { background-color: #34495e; font-size: 0.85em; padding: 5px 10px; margin-left: 5px; }
+        .btn-export:hover { background-color: #2c3e50; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -95,9 +98,7 @@
             border: 1px solid #ddd;
             text-align: left;
         }
-        th {
-            background-color: #ecf0f1;
-        }
+        th { background-color: #ecf0f1; }
         .aviso-nuvem {
             font-size: 0.85rem;
             color: #27ae60;
@@ -116,12 +117,35 @@
             flex-wrap: wrap;
             border-radius: 0 4px 4px 0;
         }
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            gap: 10px;
+        }
+        .checklist-item.checked span {
+            text-decoration: line-through;
+            color: #95a5a6;
+        }
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
         footer {
             text-align: center;
             padding: 20px;
             margin-top: 40px;
             color: #7f8c8d;
             font-size: 0.9rem;
+        }
+        /* Configurações para impressão (PDF) */
+        @media print {
+            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export { display: none !important; }
+            body { background-color: white; }
+            .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
+            section { margin-bottom: 30px; page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -141,15 +165,20 @@
 
 <div class="container">
     <section id="roteiro">
-        <h2>📅 Roteiro da Viagem</h2>
-        <p class="aviso-nuvem">✅ Sincronização ativada: Adicione passeios e horários em tempo real.</p>
+        <h2>
+            📅 Roteiro da Viagem
+            <div class="no-print">
+                <button class="btn-export" id="export-roteiro-csv">📥 Baixar Planilha</button>
+                <button class="btn-export" onclick="window.print()">🖨️ Salvar PDF</button>
+            </div>
+        </h2>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios e horários em tempo real.</p>
         
-        <form id="form-roteiro" class="form-group">
+        <form id="form-roteiro" class="form-group no-print">
             <input type="hidden" id="edit-id-roteiro">
             <input type="date" id="data-roteiro" required>
             <input type="time" id="hora-roteiro" required>
             <input type="text" id="desc-roteiro" placeholder="Ex: Ônibus Transacreana para Brasiléia" required style="flex: 2;">
-            
             <button type="submit" id="btn-salvar-roteiro">Adicionar Atividade</button>
         </form>
 
@@ -159,27 +188,29 @@
     </section>
 
     <section id="orcamento">
-        <h2>💰 Orçamento e Despesas</h2>
-        <p class="aviso-nuvem">✅ Sincronização ativada: As alterações feitas aqui aparecem para todos.</p>
+        <h2>
+            💰 Orçamento e Despesas
+            <div class="no-print">
+                <button class="btn-export" id="export-despesas-csv">📥 Baixar Planilha</button>
+                <button class="btn-export" onclick="window.print()">🖨️ Salvar PDF</button>
+            </div>
+        </h2>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: As alterações feitas aqui aparecem para todos.</p>
         
-        <form id="form-despesa" class="form-group">
+        <form id="form-despesa" class="form-group no-print">
             <input type="hidden" id="edit-id">
             <input type="text" id="desc" placeholder="Descrição da despesa" required>
-            
             <select id="moeda" required>
                 <option value="R$">BRL (R$)</option>
                 <option value="Bs">BOB (Bs - Bolivianos)</option>
                 <option value="US$">USD (US$ - Dólar)</option>
             </select>
-            
             <input type="number" id="valor" placeholder="Valor" step="0.01" required>
             <input type="text" id="pagador" placeholder="Quem pagou?" required>
-            
             <select id="dividido" required>
                 <option value="Não">Individual</option>
                 <option value="Sim">Dividido com o grupo</option>
             </select>
-            
             <button type="submit" id="btn-salvar">Adicionar Despesa</button>
         </form>
 
@@ -190,7 +221,7 @@
                     <th>Valor</th>
                     <th>Quem Pagou?</th>
                     <th>Dividido?</th>
-                    <th>Ações</th>
+                    <th class="no-print">Ações</th>
                 </tr>
             </thead>
             <tbody id="tabela-despesas">
@@ -200,16 +231,25 @@
     </section>
 
     <section id="mapas">
-        <h2>🗺️ Mapas e Localizações</h2>
-        <p>Aqui colocaremos os links e mapas do Google Maps para o hotel, aeroportos, rodoviárias e principais pontos turísticos.</p>
+        <h2>🗺️ Mapa Interativo</h2>
+        <p class="no-print">Aqui ficará o mapa colaborativo gerado no Google My Maps.</p>
+        <div style="background: #ecf0f1; padding: 40px; text-align: center; border-radius: 8px; color: #7f8c8d; font-style: italic;">
+            (Espaço reservado para colar o código iframe do Google My Maps)
+        </div>
     </section>
 
     <section id="checklist">
         <h2>✅ Checklist de Viagem</h2>
-        <div><input type="checkbox"> Certificado Internacional de Vacinação (Febre Amarela)</div>
-        <div><input type="checkbox"> Passaporte ou RG (com menos de 10 anos de emissão)</div>
-        <div><input type="checkbox"> Remédios para dor de cabeça e enjoo (altitude)</div>
-        <div><input type="checkbox"> Roupas de frio (fleece, corta-vento, luvas)</div>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Marque os itens e todos verão.</p>
+        
+        <form id="form-checklist" class="form-group no-print">
+            <input type="text" id="desc-checklist" placeholder="Adicionar novo item ao checklist (ex: Passaporte, Remédio)..." required>
+            <button type="submit">Adicionar Item</button>
+        </form>
+
+        <div id="lista-checklist">
+            <p>Carregando checklist...</p>
+        </div>
     </section>
 </div>
 
@@ -235,32 +275,47 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // Arrays para armazenar dados em memória e exportar depois
+    let dadosRoteiroCSV = [];
+    let dadosDespesasCSV = [];
+
+    // Função global de exportação para CSV
+    function exportarCSV(nomeArquivo, cabecalhos, linhas) {
+        let csvContent = "data:text/csv;charset=utf-8," + cabecalhos.join(",") + "\n";
+        linhas.forEach(linha => {
+            // Remove aspas e vírgulas para não quebrar a planilha
+            const linhaLimpa = linha.map(item => `"${String(item).replace(/"/g, '""')}"`);
+            csvContent += linhaLimpa.join(",") + "\n";
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", nomeArquivo);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }
+
     // ==========================================
-    // LÓGICA DO ROTEIRO
+    // ROTEIRO
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
-    const formRoteiro = document.getElementById('form-roteiro');
-    const listaRoteiro = document.getElementById('lista-roteiro');
-    const editIdRoteiroInput = document.getElementById('edit-id-roteiro');
-    const btnSalvarRoteiro = document.getElementById('btn-salvar-roteiro');
-
     onValue(roteiroRef, (snapshot) => {
-        listaRoteiro.innerHTML = '';
+        document.getElementById('lista-roteiro').innerHTML = '';
+        dadosRoteiroCSV = [];
         const data = snapshot.val();
         
         if (data) {
-            // Transforma em array e ordena por data e hora
             const roteiroArray = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-            roteiroArray.sort((a, b) => {
-                const dataA = new Date(`${a.data}T${a.hora}`);
-                const dataB = new Date(`${b.data}T${b.hora}`);
-                return dataA - dataB;
-            });
+            roteiroArray.sort((a, b) => new Date(`${a.data}T${a.hora}`) - new Date(`${b.data}T${b.hora}`));
 
             roteiroArray.forEach(item => {
                 const partesData = item.data.split('-');
                 const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
                 
+                // Popula o array para exportação
+                dadosRoteiroCSV.push([dataFormatada, item.hora, item.desc]);
+
                 const div = document.createElement('div');
                 div.className = 'card-roteiro';
                 div.innerHTML = `
@@ -268,79 +323,78 @@
                         <strong style="color: #2c3e50;">📅 ${dataFormatada} &nbsp; | &nbsp; ⏰ ${item.hora}</strong><br>
                         <span style="font-size: 1.1rem; display: inline-block; margin-top: 5px;">${item.desc}</span>
                     </div>
-                    <div style="margin-top: 10px;">
+                    <div class="no-print" style="margin-top: 10px;">
                         <button class="btn-edit btn-edit-roteiro" data-id="${item.id}">Editar</button>
                         <button class="btn-delete btn-delete-roteiro" data-id="${item.id}">Excluir</button>
                     </div>
                 `;
-                listaRoteiro.appendChild(div);
+                document.getElementById('lista-roteiro').appendChild(div);
             });
 
             document.querySelectorAll('.btn-delete-roteiro').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    if(confirm("Excluir esta atividade do roteiro?")) {
-                        remove(ref(db, 'roteiro/' + e.target.getAttribute('data-id')));
-                    }
+                    if(confirm("Excluir esta atividade?")) remove(ref(db, 'roteiro/' + e.target.getAttribute('data-id')));
                 });
             });
-
             document.querySelectorAll('.btn-edit-roteiro').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.target.getAttribute('data-id');
-                    const atividade = data[id];
-                    document.getElementById('data-roteiro').value = atividade.data;
-                    document.getElementById('hora-roteiro').value = atividade.hora;
-                    document.getElementById('desc-roteiro').value = atividade.desc;
-                    editIdRoteiroInput.value = id;
-                    btnSalvarRoteiro.textContent = "Atualizar Atividade";
-                    window.scrollTo(0, document.getElementById('roteiro').offsetTop);
+                    document.getElementById('data-roteiro').value = data[id].data;
+                    document.getElementById('hora-roteiro').value = data[id].hora;
+                    document.getElementById('desc-roteiro').value = data[id].desc;
+                    document.getElementById('edit-id-roteiro').value = id;
+                    document.getElementById('btn-salvar-roteiro').textContent = "Atualizar";
                 });
             });
         } else {
-            listaRoteiro.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Nenhuma atividade cadastrada ainda. Adicione o primeiro dia de viagem!</p>';
+            document.getElementById('lista-roteiro').innerHTML = '<p>Nenhuma atividade cadastrada.</p>';
         }
     });
 
-    formRoteiro.addEventListener('submit', (e) => {
+    document.getElementById('form-roteiro').addEventListener('submit', (e) => {
         e.preventDefault();
         const novaAtividade = {
             data: document.getElementById('data-roteiro').value,
             hora: document.getElementById('hora-roteiro').value,
             desc: document.getElementById('desc-roteiro').value
         };
-        const editKey = editIdRoteiroInput.value;
+        const editKey = document.getElementById('edit-id-roteiro').value;
         if (editKey) {
             update(ref(db, 'roteiro/' + editKey), novaAtividade);
-            btnSalvarRoteiro.textContent = "Adicionar Atividade";
+            document.getElementById('btn-salvar-roteiro').textContent = "Adicionar Atividade";
         } else {
             push(roteiroRef, novaAtividade);
         }
-        formRoteiro.reset();
-        editIdRoteiroInput.value = '';
+        document.getElementById('form-roteiro').reset();
+        document.getElementById('edit-id-roteiro').value = '';
+    });
+
+    document.getElementById('export-roteiro-csv').addEventListener('click', () => {
+        exportarCSV("Roteiro_LaPaz_2027.csv", ["Data", "Hora", "Descrição"], dadosRoteiroCSV);
     });
 
     // ==========================================
-    // LÓGICA DO ORÇAMENTO (Mantida intacta)
+    // ORÇAMENTO
     // ==========================================
     const despesasRef = ref(db, 'despesas');
-    const formDespesa = document.getElementById('form-despesa');
-    const tabela = document.getElementById('tabela-despesas');
-    const editIdInput = document.getElementById('edit-id');
-    const btnSalvar = document.getElementById('btn-salvar');
-
     onValue(despesasRef, (snapshot) => {
+        const tabela = document.getElementById('tabela-despesas');
         tabela.innerHTML = '';
+        dadosDespesasCSV = [];
         const data = snapshot.val();
+
         if (data) {
             Object.keys(data).forEach(key => {
                 const d = data[key];
+                dadosDespesasCSV.push([d.desc, d.moeda, parseFloat(d.valor).toFixed(2), d.pagador, d.dividido]);
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${d.desc}</td>
                     <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
                     <td>${d.pagador}</td>
                     <td>${d.dividido}</td>
-                    <td>
+                    <td class="no-print">
                         <button class="btn-edit btn-edit-despesa" data-id="${key}">Editar</button>
                         <button class="btn-delete btn-delete-despesa" data-id="${key}">Excluir</button>
                     </td>
@@ -350,32 +404,27 @@
 
             document.querySelectorAll('.btn-delete-despesa').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    if(confirm("Tem certeza que deseja excluir esta despesa?")) {
-                        remove(ref(db, 'despesas/' + e.target.getAttribute('data-id')));
-                    }
+                    if(confirm("Excluir esta despesa?")) remove(ref(db, 'despesas/' + e.target.getAttribute('data-id')));
                 });
             });
-
             document.querySelectorAll('.btn-edit-despesa').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.target.getAttribute('data-id');
-                    const despesa = data[id];
-                    document.getElementById('desc').value = despesa.desc;
-                    document.getElementById('moeda').value = despesa.moeda;
-                    document.getElementById('valor').value = despesa.valor;
-                    document.getElementById('pagador').value = despesa.pagador;
-                    document.getElementById('dividido').value = despesa.dividido;
-                    editIdInput.value = id;
-                    btnSalvar.textContent = "Atualizar Despesa";
-                    document.getElementById('desc').focus();
+                    document.getElementById('desc').value = data[id].desc;
+                    document.getElementById('moeda').value = data[id].moeda;
+                    document.getElementById('valor').value = data[id].valor;
+                    document.getElementById('pagador').value = data[id].pagador;
+                    document.getElementById('dividido').value = data[id].dividido;
+                    document.getElementById('edit-id').value = id;
+                    document.getElementById('btn-salvar').textContent = "Atualizar";
                 });
             });
         } else {
-            tabela.innerHTML = '<tr><td colspan="5" style="text-align:center; color: #7f8c8d;">Nenhuma despesa cadastrada ainda.</td></tr>';
+            tabela.innerHTML = '<tr><td colspan="5">Nenhuma despesa cadastrada.</td></tr>';
         }
     });
 
-    formDespesa.addEventListener('submit', (e) => {
+    document.getElementById('form-despesa').addEventListener('submit', (e) => {
         e.preventDefault();
         const novaDespesa = {
             desc: document.getElementById('desc').value,
@@ -384,17 +433,76 @@
             pagador: document.getElementById('pagador').value,
             dividido: document.getElementById('dividido').value
         };
-        const editKey = editIdInput.value;
+        const editKey = document.getElementById('edit-id').value;
         if (editKey) {
             update(ref(db, 'despesas/' + editKey), novaDespesa);
-            btnSalvar.textContent = "Adicionar Despesa";
+            document.getElementById('btn-salvar').textContent = "Adicionar Despesa";
         } else {
             push(despesasRef, novaDespesa);
         }
-        formDespesa.reset();
-        editIdInput.value = '';
+        document.getElementById('form-despesa').reset();
+        document.getElementById('edit-id').value = '';
     });
-</script>
 
+    document.getElementById('export-despesas-csv').addEventListener('click', () => {
+        exportarCSV("Despesas_LaPaz_2027.csv", ["Descrição", "Moeda", "Valor", "Quem Pagou", "Dividido"], dadosDespesasCSV);
+    });
+
+    // ==========================================
+    // CHECKLIST INTERATIVO
+    // ==========================================
+    const checklistRef = ref(db, 'checklist');
+    const formChecklist = document.getElementById('form-checklist');
+    const listaChecklist = document.getElementById('lista-checklist');
+
+    onValue(checklistRef, (snapshot) => {
+        listaChecklist.innerHTML = '';
+        const data = snapshot.val();
+        
+        if (data) {
+            Object.keys(data).forEach(key => {
+                const item = data[key];
+                const div = document.createElement('div');
+                div.className = `checklist-item ${item.concluido ? 'checked' : ''}`;
+                div.innerHTML = `
+                    <input type="checkbox" data-id="${key}" ${item.concluido ? 'checked' : ''}>
+                    <span style="flex: 1; font-size: 1.1rem;">${item.desc}</span>
+                    <button class="btn-delete no-print" data-id="${key}">Excluir</button>
+                `;
+                listaChecklist.appendChild(div);
+            });
+
+            // Atualizar status (Concluído / Não Concluído)
+            listaChecklist.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                chk.addEventListener('change', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    update(ref(db, 'checklist/' + id), { concluido: e.target.checked });
+                });
+            });
+
+            // Excluir Item do Checklist
+            listaChecklist.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if(confirm("Excluir item do checklist?")) {
+                        remove(ref(db, 'checklist/' + e.target.getAttribute('data-id')));
+                    }
+                });
+            });
+        } else {
+            listaChecklist.innerHTML = '<p>Nenhum item adicionado ao checklist.</p>';
+        }
+    });
+
+    formChecklist.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const novoItem = {
+            desc: document.getElementById('desc-checklist').value,
+            concluido: false
+        };
+        push(checklistRef, novoItem);
+        formChecklist.reset();
+    });
+
+</script>
 </body>
 </html>
