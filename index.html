@@ -341,7 +341,7 @@
         <form id="form-roteiro" class="form-group no-print">
             <input type="hidden" id="edit-id-roteiro">
             <input type="date" id="data-roteiro" required>
-            <input type="time" id="hora-roteiro" required>
+            <input type="text" id="hora-roteiro" placeholder="Horário (ex: 14:00)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" required style="max-width: 140px;">
             <input type="text" id="desc-roteiro" placeholder="Ex: Ônibus Transacreana para Brasiléia" required style="flex: 2; min-width: 200px;">
             <input type="url" id="link-roteiro" placeholder="Link / Reserva / Ingresso (opcional - https://...)" style="flex: 2; min-width: 200px;">
             <button type="submit" id="btn-salvar-roteiro">Adicionar Atividade</button>
