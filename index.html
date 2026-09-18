@@ -12,7 +12,7 @@
             margin: 0;
             padding: 0;
         }
-                        header {
+        header {
             background-color: #2c3e50;
             background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6)), url('https://upload.wikimedia.org/wikipedia/commons/c/c5/Salar_de_Uyuni_-_Bolivia.jpg');
             background-size: cover;
@@ -75,12 +75,36 @@
             border-radius: 5px;
             border: 1px solid #ddd;
         }
-        .form-group input, .form-group select {
+        .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="date"], .form-group input[type="time"], .form-group select {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             flex: 1;
             min-width: 120px;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            background: #fff;
+            width: 100%;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #ecf0f1;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .checkbox-group label:hover {
+            background: #d0d3d4;
         }
         button {
             padding: 8px 15px;
@@ -128,6 +152,24 @@
             flex-wrap: wrap;
             border-radius: 0 4px 4px 0;
         }
+        .badge-participante {
+            background-color: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .badge-participante span {
+            cursor: pointer;
+            color: #ffcccb;
+        }
+        .badge-participante span:hover {
+            color: #ff4c4c;
+        }
         .checklist-item {
             display: flex;
             align-items: center;
@@ -138,11 +180,6 @@
         .checklist-item.checked span {
             text-decoration: line-through;
             color: #95a5a6;
-        }
-        .checklist-item input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
         }
         .painel-cambio {
             background-color: #e8f8f5;
@@ -195,6 +232,7 @@
 
 <nav>
     <a href="#roteiro">Roteiro</a>
+    <a href="#participantes">Participantes</a>
     <a href="#orcamento">Orçamento</a>
     <a href="#despesas">Despesas Reais</a>
     <a href="#mapas">Mapas</a>
@@ -227,11 +265,28 @@
 
     <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
 
+    <!-- PARTICIPANTES -->
+    <section id="participantes">
+        <h2>👥 Participantes da Viagem</h2>
+        <p class="aviso-nuvem no-print">✅ Adicione quem vai na viagem. Os nomes aparecerão nas opções de despesas.</p>
+        
+        <form id="form-participante" class="form-group no-print">
+            <input type="text" id="nome-participante" placeholder="Nome do participante (Ex: Anderson)" required>
+            <button type="submit">Adicionar Participante</button>
+        </form>
+
+        <div id="lista-participantes" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+            <p>Carregando participantes...</p>
+        </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
+
     <!-- PAINEL GLOBAL DE CÂMBIO -->
     <div class="painel-cambio no-print" id="area-financeira">
         <strong style="color: #16a085;">💱 Cotação do Dia (Para converter e somar tudo em Reais):</strong>
-        <label>1 Bs (Boliviano) = R$ <input type="number" id="cotacao-bs" value="0.85" step="0.01"></label>
-        <label>1 US$ (Dólar) = R$ <input type="number" id="cotacao-usd" value="5.50" step="0.01"></label>
+        <label>1 Bs = R$ <input type="number" id="cotacao-bs" value="0.85" step="0.01"></label>
+        <label>1 US$ = R$ <input type="number" id="cotacao-usd" value="5.50" step="0.01"></label>
     </div>
 
     <!-- ORÇAMENTO (PLANEJAMENTO) -->
@@ -243,7 +298,6 @@
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
-        <p class="aviso-nuvem no-print">✅ Planejem aqui os custos antes da viagem. Sincronizado para todos.</p>
         
         <form id="form-orcamento" class="form-group no-print">
             <input type="hidden" id="edit-id-orcamento">
@@ -254,8 +308,19 @@
                 <option value="US$">USD (US$ - Dólar)</option>
             </select>
             <input type="number" id="valor-orcamento" placeholder="Valor Estimado" step="0.01" required>
-            <input type="text" id="pagador-orcamento" placeholder="Quem vai pagar?" required>
-            <input type="text" id="dividido-orcamento" list="opcoes-divisao" placeholder="Dividido com?" required>
+            
+            <select id="pagador-orcamento" required>
+                <option value="" disabled selected>Quem vai pagar?</option>
+                <!-- Preenchido via JS -->
+            </select>
+            
+            <div style="width: 100%; margin-top: 5px;">
+                <span style="font-size: 0.9rem; color: #555; font-weight: bold;">Dividido com quem? (Marque as opções):</span>
+                <div id="divisao-orcamento-container" class="checkbox-group">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+            
             <button type="submit" id="btn-salvar-orcamento">Adicionar ao Orçamento</button>
         </form>
 
@@ -288,7 +353,6 @@
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
-        <p class="aviso-nuvem no-print">✅ Lancem aqui os gastos REAIS durante a viagem.</p>
         
         <form id="form-despesa" class="form-group no-print">
             <input type="hidden" id="edit-id-despesa">
@@ -299,12 +363,18 @@
                 <option value="US$">USD (US$ - Dólar)</option>
             </select>
             <input type="number" id="valor-despesa" placeholder="Valor Real" step="0.01" required>
-            <input type="text" id="pagador-despesa" placeholder="Quem pagou?" required>
-            <input type="text" id="dividido-despesa" list="opcoes-divisao" placeholder="Dividido com?" required>
-            <datalist id="opcoes-divisao">
-                <option value="Individual (Apenas quem pagou)">
-                <option value="Todos do grupo">
-            </datalist>
+            
+            <select id="pagador-despesa" required>
+                <option value="" disabled selected>Quem pagou?</option>
+                <!-- Preenchido via JS -->
+            </select>
+            
+            <div style="width: 100%; margin-top: 5px;">
+                <span style="font-size: 0.9rem; color: #555; font-weight: bold;">Dividido com quem? (Marque as opções):</span>
+                <div id="divisao-despesa-container" class="checkbox-group">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
             
             <button type="submit" id="btn-salvar-despesa">Adicionar Despesa Real</button>
         </form>
@@ -372,7 +442,93 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Sistema Global de Câmbio
+    // ==========================================
+    // SISTEMA DE PARTICIPANTES
+    // ==========================================
+    const participantesRef = ref(db, 'participantes');
+    
+    // Função global para excluir participante
+    window.excluirParticipante = function(id) {
+        if(confirm("Remover este participante?")) {
+            remove(ref(db, 'participantes/' + id));
+        }
+    };
+
+    onValue(participantesRef, (snapshot) => {
+        const containerHtml = document.getElementById('lista-participantes');
+        containerHtml.innerHTML = '';
+        
+        const pagadorOrcamento = document.getElementById('pagador-orcamento');
+        const pagadorDespesa = document.getElementById('pagador-despesa');
+        let optionsHtml = '<option value="" disabled selected>Quem pagou?</option>';
+        
+        const divOrcamento = document.getElementById('divisao-orcamento-container');
+        const divDespesa = document.getElementById('divisao-despesa-container');
+        let checkboxesHtml = '<label><input type="checkbox" value="Todos do grupo"> Todos do grupo</label>';
+
+        const data = snapshot.val();
+        
+        if (data) {
+            Object.keys(data).forEach(key => {
+                const nome = data[key].nome;
+                
+                // Exibe os crachás na aba Participantes
+                containerHtml.innerHTML += `<div class="badge-participante">${nome} <span onclick="window.excluirParticipante('${key}')" title="Remover">✖</span></div>`;
+                
+                // Alimenta os dropdowns (Quem pagou?)
+                optionsHtml += `<option value="${nome}">${nome}</option>`;
+                
+                // Alimenta os checkboxes (Dividido com?)
+                checkboxesHtml += `<label><input type="checkbox" value="${nome}"> ${nome}</label>`;
+            });
+        } else {
+            containerHtml.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Adicione os participantes acima para liberar as divisões de despesas.</p>';
+        }
+
+        pagadorOrcamento.innerHTML = optionsHtml;
+        pagadorDespesa.innerHTML = optionsHtml;
+        divOrcamento.innerHTML = checkboxesHtml;
+        divDespesa.innerHTML = checkboxesHtml;
+    });
+
+    document.getElementById('form-participante').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nomeInput = document.getElementById('nome-participante');
+        push(participantesRef, { nome: nomeInput.value.trim() });
+        nomeInput.value = '';
+    });
+
+    // ==========================================
+    // FUNÇÕES AUXILIARES DE FORMULÁRIO (Checkboxes)
+    // ==========================================
+    function obterDivisaoSelecionada(containerId) {
+        const container = document.getElementById(containerId);
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+        let selecionados = [];
+        checkboxes.forEach(cb => selecionados.push(cb.value));
+        
+        if (selecionados.length === 0) return "Não informado";
+        if (selecionados.includes("Todos do grupo")) return "Todos do grupo";
+        return selecionados.join(', ');
+    }
+
+    function setarDivisaoSelecionada(containerId, valorSalvo) {
+        const container = document.getElementById(containerId);
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            if (valorSalvo === "Todos do grupo" && cb.value === "Todos do grupo") {
+                cb.checked = true;
+            } else if (valorSalvo.includes(cb.value) && cb.value !== "Todos do grupo") {
+                cb.checked = true;
+            } else {
+                cb.checked = false;
+            }
+        });
+    }
+
+    // ==========================================
+    // SISTEMA GLOBAL DE CÂMBIO E EXPORTAÇÃO
+    // ==========================================
     const inputCotacaoBs = document.getElementById('cotacao-bs');
     const inputCotacaoUsd = document.getElementById('cotacao-usd');
 
@@ -390,11 +546,6 @@
         if (moeda === 'US$') return val * cotacoes.usd;
         return val;
     }
-
-    // Variáveis para guardar dados do banco e exportar CSV
-    let dadosRoteiroCSV = [];
-    let dadosOrcamentoDB = {};
-    let dadosDespesasDB = {};
 
     function exportarCSV(nomeArquivo, cabecalhos, linhas) {
         let csvContent = "data:text/csv;charset=utf-8," + cabecalhos.join(",") + "\n";
@@ -415,6 +566,8 @@
     // ROTEIRO
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
+    let dadosRoteiroCSV = [];
+    
     onValue(roteiroRef, (snapshot) => {
         document.getElementById('lista-roteiro').innerHTML = '';
         dadosRoteiroCSV = [];
@@ -529,6 +682,7 @@
     // ORÇAMENTO (PLANEJAMENTO)
     // ==========================================
     const orcamentoRef = ref(db, 'orcamento');
+    let dadosOrcamentoDB = {};
     let csvOrcamento = [];
     
     onValue(orcamentoRef, (snapshot) => {
@@ -551,8 +705,13 @@
                 document.getElementById('desc-orcamento').value = d.desc;
                 document.getElementById('moeda-orcamento').value = d.moeda;
                 document.getElementById('valor-orcamento').value = d.valor;
-                document.getElementById('pagador-orcamento').value = d.pagador;
-                document.getElementById('dividido-orcamento').value = d.dividido;
+                
+                // Trata o Select e os Checkboxes
+                setTimeout(() => {
+                    document.getElementById('pagador-orcamento').value = d.pagador;
+                    setarDivisaoSelecionada('divisao-orcamento-container', d.dividido);
+                }, 100);
+                
                 document.getElementById('edit-id-orcamento').value = id;
                 document.getElementById('btn-salvar-orcamento').textContent = "Atualizar Orçamento";
             });
@@ -561,12 +720,19 @@
 
     document.getElementById('form-orcamento').addEventListener('submit', (e) => {
         e.preventDefault();
+        
+        const divisao = obterDivisaoSelecionada('divisao-orcamento-container');
+        if(divisao === "Não informado") {
+            alert("Por favor, marque com quem essa despesa será dividida.");
+            return;
+        }
+
         const novoItem = {
             desc: document.getElementById('desc-orcamento').value,
             moeda: document.getElementById('moeda-orcamento').value,
             valor: document.getElementById('valor-orcamento').value,
             pagador: document.getElementById('pagador-orcamento').value,
-            dividido: document.getElementById('dividido-orcamento').value
+            dividido: divisao
         };
         const editKey = document.getElementById('edit-id-orcamento').value;
         if (editKey) {
@@ -575,8 +741,10 @@
         } else {
             push(orcamentoRef, novoItem);
         }
+        
         document.getElementById('form-orcamento').reset();
         document.getElementById('edit-id-orcamento').value = '';
+        setarDivisaoSelecionada('divisao-orcamento-container', ''); // Limpa marcações
     });
 
     document.getElementById('export-orcamento-csv').addEventListener('click', () => {
@@ -587,6 +755,7 @@
     // DESPESAS (REALIZADAS)
     // ==========================================
     const despesasRef = ref(db, 'despesas');
+    let dadosDespesasDB = {};
     let csvDespesas = [];
 
     onValue(despesasRef, (snapshot) => {
@@ -609,8 +778,13 @@
                 document.getElementById('desc-despesa').value = d.desc;
                 document.getElementById('moeda-despesa').value = d.moeda;
                 document.getElementById('valor-despesa').value = d.valor;
-                document.getElementById('pagador-despesa').value = d.pagador;
-                document.getElementById('dividido-despesa').value = d.dividido;
+                
+                // Trata o Select e os Checkboxes
+                setTimeout(() => {
+                    document.getElementById('pagador-despesa').value = d.pagador;
+                    setarDivisaoSelecionada('divisao-despesa-container', d.dividido);
+                }, 100);
+
                 document.getElementById('edit-id-despesa').value = id;
                 document.getElementById('btn-salvar-despesa').textContent = "Atualizar Despesa";
             });
@@ -619,12 +793,19 @@
 
     document.getElementById('form-despesa').addEventListener('submit', (e) => {
         e.preventDefault();
+
+        const divisao = obterDivisaoSelecionada('divisao-despesa-container');
+        if(divisao === "Não informado") {
+            alert("Por favor, marque com quem essa despesa foi dividida.");
+            return;
+        }
+
         const novaDespesa = {
             desc: document.getElementById('desc-despesa').value,
             moeda: document.getElementById('moeda-despesa').value,
             valor: document.getElementById('valor-despesa').value,
             pagador: document.getElementById('pagador-despesa').value,
-            dividido: document.getElementById('dividido-despesa').value
+            dividido: divisao
         };
         const editKey = document.getElementById('edit-id-despesa').value;
         if (editKey) {
@@ -633,8 +814,10 @@
         } else {
             push(despesasRef, novaDespesa);
         }
+        
         document.getElementById('form-despesa').reset();
         document.getElementById('edit-id-despesa').value = '';
+        setarDivisaoSelecionada('divisao-despesa-container', ''); // Limpa marcações
     });
 
     document.getElementById('export-despesas-csv').addEventListener('click', () => {
@@ -642,14 +825,8 @@
     });
 
     // ATUALIZAR TOTALIZADORES QUANDO O CÂMBIO MUDAR NA TELA
-    inputCotacaoBs.addEventListener('input', () => {
-        atualizarVisualOrcamento();
-        atualizarVisualDespesas();
-    });
-    inputCotacaoUsd.addEventListener('input', () => {
-        atualizarVisualOrcamento();
-        atualizarVisualDespesas();
-    });
+    inputCotacaoBs.addEventListener('input', () => { atualizarVisualOrcamento(); atualizarVisualDespesas(); });
+    inputCotacaoUsd.addEventListener('input', () => { atualizarVisualOrcamento(); atualizarVisualDespesas(); });
 
     // ==========================================
     // CHECKLIST INTERATIVO
