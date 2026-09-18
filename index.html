@@ -341,7 +341,7 @@
         <form id="form-roteiro" class="form-group no-print">
             <input type="hidden" id="edit-id-roteiro">
             <input type="date" id="data-roteiro" required>
-            <input type="text" id="hora-roteiro" placeholder="Horário (ex: 14:00)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" required style="max-width: 140px;">
+            <input type="text" id="hora-roteiro" placeholder="Horário (ex: 08:00)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" title="Formato HH:MM, ex: 08:30" required style="max-width: 140px;">
             <input type="text" id="desc-roteiro" placeholder="Ex: Ônibus Transacreana para Brasiléia" required style="flex: 2; min-width: 200px;">
             <input type="url" id="link-roteiro" placeholder="Link / Reserva / Ingresso (opcional - https://...)" style="flex: 2; min-width: 200px;">
             <button type="submit" id="btn-salvar-roteiro">Adicionar Atividade</button>
@@ -397,7 +397,7 @@
     <!-- ORÇAMENTO (PLANEJAMENTO) -->
     <section id="orcamento">
         <h2>
-            📝 Orçamento (Planejado)
+            📝 Orçamento (Planejado - Ordenado por Data)
             <div class="no-print">
                 <button class="btn-export" id="export-orcamento-csv">📥 Planilha</button>
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
@@ -820,7 +820,7 @@
     });
 
     // ==========================================
-    // ORÇAMENTO
+    // ORÇAMENTO (PLANEJADO - ORDENADO POR DATA)
     // ==========================================
     const orcamentoRef = ref(db, 'orcamento');
     let dadosOrcamentoDB = {};
@@ -838,8 +838,19 @@
         csvOrcamento = [];
 
         if (dadosOrcamentoDB) {
-            Object.keys(dadosOrcamentoDB).forEach(key => {
-                const d = dadosOrcamentoDB[key];
+            // Converte em lista e ordena por data crescente
+            const orcamentoArray = Object.keys(dadosOrcamentoDB).map(key => ({
+                id: key,
+                ...dadosOrcamentoDB[key]
+            }));
+
+            orcamentoArray.sort((a, b) => {
+                const dataA = a.data ? new Date(a.data).getTime() : 0;
+                const dataB = b.data ? new Date(b.data).getTime() : 0;
+                return dataA - dataB;
+            });
+
+            orcamentoArray.forEach(d => {
                 const valorConvertido = converterParaBRL(d.valor, d.moeda);
                 totalReais += valorConvertido;
                 
@@ -862,8 +873,8 @@
                     <td><span style="font-size: 0.85rem; padding: 3px 8px; border-radius: 12px; background: ${tipoLabel === 'Individual' ? '#f39c12' : '#3498db'}; color: white;">${tipoLabel}</span></td>
                     <td>${membrosLabel}</td>
                     <td class="no-print">
-                        <button class="btn-edit btn-edit-tabela-orcamento" data-id="${key}">Editar</button>
-                        <button class="btn-delete btn-delete-tabela-orcamento" data-id="${key}">Excluir</button>
+                        <button class="btn-edit btn-edit-tabela-orcamento" data-id="${d.id}">Editar</button>
+                        <button class="btn-delete btn-delete-tabela-orcamento" data-id="${d.id}">Excluir</button>
                     </td>
                 `;
                 tabela.appendChild(tr);
