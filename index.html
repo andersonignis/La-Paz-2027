@@ -515,7 +515,7 @@
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
-        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios com horário de início e término e marque os concluídos para recolher da tela.</p>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios com horário de início e término. Se alterar data ou hora aqui, o orçamento atualiza sozinho!</p>
         
         <form id="form-roteiro" class="form-group no-print">
             <input type="hidden" id="edit-id-roteiro">
@@ -1017,7 +1017,6 @@
 
         atividadesDoDia.sort((a, b) => (a.hora > b.hora ? 1 : -1));
 
-        // Slots sugeridos de referência diária
         const slotsReferencia = [
             { hora: "08:00", periodo: "Manhã" },
             { hora: "10:30", periodo: "Meio da Manhã" },
@@ -1047,12 +1046,11 @@
             });
         }
 
-        // Verifica se os slots sugeridos conflitam com o intervalo de alguma atividade
         function horarioConflita(horaSlot) {
             const minSlot = parseInt(horaSlot.split(':')[0], 10) * 60 + parseInt(horaSlot.split(':')[1], 10);
             return atividadesDoDia.some(a => {
                 const minInicio = parseInt(a.hora.split(':')[0], 10) * 60 + parseInt(a.hora.split(':')[1], 10);
-                let minFim = minInicio + 90; // Default 1h30 se não tiver horaFim
+                let minFim = minInicio + 90;
                 if (a.horaFim) {
                     minFim = parseInt(a.horaFim.split(':')[0], 10) * 60 + parseInt(a.horaFim.split(':')[1], 10);
                 }
@@ -1106,7 +1104,7 @@
     });
 
     // ==========================================
-    // ROTEIRO (Com Início, Término e Conclusão)
+    // ROTEIRO (Com Início, Término, Conclusão e Sincronização)
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
@@ -1269,6 +1267,7 @@
         }
     });
 
+    // SUBMIT DO ROTEIRO COM SINCRONIZAÇÃO AUTOMÁTICA NO ORÇAMENTO
     document.getElementById('form-roteiro').addEventListener('submit', (e) => {
         e.preventDefault();
         if (!verificarAutenticado()) return;
@@ -1283,7 +1282,24 @@
         };
 
         if (editKey) {
+            const descAntiga = roteiroCache[editKey]?.desc?.trim().toLowerCase();
+
             update(ref(db, 'roteiro/' + editKey), novaAtividade);
+
+            // Sincroniza automaticamente a data e o horário no Orçamento
+            if (orcamentoCache && descAntiga) {
+                Object.keys(orcamentoCache).forEach(k => {
+                    const itemOrc = orcamentoCache[k];
+                    if (itemOrc.desc && itemOrc.desc.trim().toLowerCase() === descAntiga) {
+                        update(ref(db, 'orcamento/' + k), {
+                            desc: novaAtividade.desc,
+                            data: novaAtividade.data,
+                            hora: novaAtividade.hora
+                        });
+                    }
+                });
+            }
+
             document.getElementById('btn-salvar-roteiro').textContent = "Adicionar Atividade";
         } else {
             novaAtividade.concluido = false;
