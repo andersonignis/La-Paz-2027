@@ -824,6 +824,16 @@
     // ==========================================
     // GERADOR DE LINK DO GOOGLE CALENDAR
     // ==========================================
+    function detectarLocalizacao(texto) {
+        const t = (texto || '').toLowerCase();
+        if (t.includes('rio branco')) return 'Rio Branco, AC, Brasil';
+        if (t.includes('brasiléia') || t.includes('brasileia')) return 'Brasiléia, AC, Brasil';
+        if (t.includes('epitaciolândia') || t.includes('epitaciolandia')) return 'Epitaciolândia, AC, Brasil';
+        if (t.includes('cobija')) return 'Cobija, Pando, Bolívia';
+        if (t.includes('la paz') || t.includes('tiwanaku') || t.includes('copacabana')) return 'La Paz, Bolívia';
+        return ''; // Deixa em branco caso não identifique
+    }
+
     function gerarLinkGoogleAgenda(item) {
         const dataPura = item.data.replace(/-/g, '');
         const horaInicioPura = item.hora.replace(':', '') + '00';
@@ -832,7 +842,6 @@
         if (item.horaFim && item.horaFim.includes(':')) {
             horaFimPura = item.horaFim.replace(':', '') + '00';
         } else {
-            // Se não tiver hora de fim, calcula 1h30 adiante
             const partesHora = item.hora.split(':').map(Number);
             let hFim = partesHora[0] + 1;
             let mFim = partesHora[1] + 30;
@@ -851,7 +860,10 @@
             detalhes += encodeURIComponent("\n\nLink / Reserva: " + item.link);
         }
 
-        return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${datasFormatadas}&details=${detalhes}&location=${encodeURIComponent("La Paz, Bolívia")}`;
+        const localDetectado = detectarLocalizacao(item.desc);
+        const paramLocal = localDetectado ? `&location=${encodeURIComponent(localDetectado)}` : '';
+
+        return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${datasFormatadas}&details=${detalhes}${paramLocal}`;
     }
 
     // ==========================================
