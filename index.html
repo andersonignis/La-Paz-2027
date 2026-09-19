@@ -195,6 +195,7 @@
             margin-bottom: 8px;
             border-radius: 6px;
             font-size: 0.9rem;
+            gap: 10px;
         }
         .timeline-ocupado {
             background: #eaf2f8;
@@ -206,12 +207,30 @@
             border: 1px dashed #bdc3c7;
             color: #7f8c8d;
         }
+        .btn-agenda-edit {
+            background: #f39c12;
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .btn-agenda-edit:hover {
+            background: #e67e22;
+        }
         .btn-preencher-slot {
             background: #27ae60;
             color: white;
             padding: 4px 8px;
             font-size: 0.75rem;
             border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
         }
         .btn-preencher-slot:hover {
             background: #2ecc71;
@@ -935,7 +954,7 @@
     }
 
     // ==========================================
-    // CALENDÁRIO INTERATIVO & AGENDA DIÁRIA (Com Início e Fim)
+    // CALENDÁRIO INTERATIVO & AGENDA DIÁRIA (Com Edição Direta)
     // ==========================================
     let mesAtualCal = 2; // Março (0=Jan, 2=Mar)
     let anoAtualCal = 2027;
@@ -943,6 +962,21 @@
 
     const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const nomesDiasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+    function carregarAtividadeParaEdicao(id) {
+        if (!verificarAutenticado()) return;
+        if (roteiroCache && roteiroCache[id]) {
+            const item = roteiroCache[id];
+            document.getElementById('data-roteiro').value = item.data;
+            document.getElementById('hora-roteiro').value = item.hora;
+            document.getElementById('hora-fim-roteiro').value = item.horaFim || '';
+            document.getElementById('desc-roteiro').value = item.desc;
+            document.getElementById('link-roteiro').value = item.link || '';
+            document.getElementById('edit-id-roteiro').value = id;
+            document.getElementById('btn-salvar-roteiro').textContent = "Atualizar Atividade";
+            window.scrollTo({ top: document.getElementById('roteiro').offsetTop - 20, behavior: 'smooth' });
+        }
+    }
 
     function renderizarCalendario() {
         const grid = document.getElementById('grid-calendario');
@@ -1037,12 +1071,19 @@
                 item.className = 'timeline-item timeline-ocupado';
                 const horaFimTexto = ativ.horaFim ? ` às ${ativ.horaFim}` : '';
                 item.innerHTML = `
-                    <div>
+                    <div style="flex: 1;">
                         <strong>⏰ ${ativ.hora}${horaFimTexto}</strong> - <span>${ativ.desc}</span>
                     </div>
-                    <small style="font-weight: bold; color: #2980b9;">Ocupado</small>
+                    <button class="btn-agenda-edit" data-id="${ativ.id}">✏️ Editar</button>
                 `;
                 container.appendChild(item);
+            });
+
+            container.querySelectorAll('.btn-agenda-edit').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    carregarAtividadeParaEdicao(id);
+                });
             });
         }
 
@@ -1086,7 +1127,7 @@
                     document.getElementById('hora-roteiro').value = hora;
                     document.getElementById('hora-fim-roteiro').value = '';
                     document.getElementById('desc-roteiro').focus();
-                    window.scrollTo(0, document.getElementById('roteiro').offsetTop);
+                    window.scrollTo({ top: document.getElementById('roteiro').offsetTop - 20, behavior: 'smooth' });
                 });
             });
         }
@@ -1239,16 +1280,8 @@
 
             document.querySelectorAll('.btn-edit-roteiro').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    if (!verificarAutenticado()) return;
                     const id = e.target.getAttribute('data-id');
-                    document.getElementById('data-roteiro').value = data[id].data;
-                    document.getElementById('hora-roteiro').value = data[id].hora;
-                    document.getElementById('hora-fim-roteiro').value = data[id].horaFim || '';
-                    document.getElementById('desc-roteiro').value = data[id].desc;
-                    document.getElementById('link-roteiro').value = data[id].link || '';
-                    document.getElementById('edit-id-roteiro').value = id;
-                    document.getElementById('btn-salvar-roteiro').textContent = "Atualizar Atividade";
-                    window.scrollTo(0, document.getElementById('roteiro').offsetTop);
+                    carregarAtividadeParaEdicao(id);
                 });
             });
         } else {
@@ -1286,7 +1319,6 @@
 
             update(ref(db, 'roteiro/' + editKey), novaAtividade);
 
-            // Sincroniza automaticamente a data e o horário no Orçamento
             if (orcamentoCache && descAntiga) {
                 Object.keys(orcamentoCache).forEach(k => {
                     const itemOrc = orcamentoCache[k];
@@ -1476,7 +1508,7 @@
                 
                 document.getElementById('edit-id-orcamento').value = id;
                 document.getElementById('btn-salvar-orcamento').textContent = "Atualizar Orçamento";
-                window.scrollTo(0, document.getElementById('orcamento').offsetTop);
+                window.scrollTo({ top: document.getElementById('orcamento').offsetTop - 20, behavior: 'smooth' });
             });
         });
     }
@@ -1630,7 +1662,7 @@
 
                 document.getElementById('edit-id-despesa').value = id;
                 document.getElementById('btn-salvar-despesa').textContent = "Atualizar Despesa";
-                window.scrollTo(0, document.getElementById('despesas').offsetTop);
+                window.scrollTo({ top: document.getElementById('despesas').offsetTop - 20, behavior: 'smooth' });
             });
         });
     }
