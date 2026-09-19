@@ -502,6 +502,7 @@
     <div id="auth-logged-in" style="display: none; align-items: center; gap: 10px;">
         <img id="user-photo" src="" alt="Foto">
         <span id="user-name"></span>
+        <span id="user-badge-status" style="font-size: 0.75rem; background: #27ae60; padding: 2px 6px; border-radius: 10px;">Autorizado</span>
         <button id="btn-logout" class="btn-auth btn-auth-logout">Sair</button>
     </div>
 </div>
@@ -802,6 +803,16 @@
     import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
+    // ==========================================
+    // LISTA DE E-MAILS AUTORIZADOS A EDITAR
+    // (Substitua ou adicione os e-mails dos seus amigos)
+    // ==========================================
+    const EMAILS_AUTORIZADOS = [
+        "andersonignis@gmail.com", // Coloque seu e-mail aqui
+        // "amigo1@gmail.com",
+        // "amigo2@gmail.com"
+    ];
+
     const firebaseConfig = {
         apiKey: "AIzaSyCteFGVFOBDt_yMUZUCqS0RJ5hfF2A-Yoc",
         authDomain: "la-paz-2027-36647.firebaseapp.com",
@@ -831,7 +842,7 @@
         if (t.includes('epitaciolândia') || t.includes('epitaciolandia')) return 'Epitaciolândia, AC, Brasil';
         if (t.includes('cobija')) return 'Cobija, Pando, Bolívia';
         if (t.includes('la paz') || t.includes('tiwanaku') || t.includes('copacabana')) return 'La Paz, Bolívia';
-        return ''; // Deixa em branco caso não identifique
+        return '';
     }
 
     function gerarLinkGoogleAgenda(item) {
@@ -867,21 +878,38 @@
     }
 
     // ==========================================
-    // SISTEMA DE AUTENTICAÇÃO
+    // SISTEMA DE AUTENTICAÇÃO COM CONTROLE DE ACESSO
     // ==========================================
     const authLoggedOut = document.getElementById('auth-logged-out');
     const authLoggedIn = document.getElementById('auth-logged-in');
     const userName = document.getElementById('user-name');
     const userPhoto = document.getElementById('user-photo');
 
+    function emailEstaAutorizado(email) {
+        if (!email) return false;
+        // Se a lista estiver vazia por padrão, permite para evitar bloqueio acidental
+        if (EMAILS_AUTORIZADOS.length === 0) return true;
+        return EMAILS_AUTORIZADOS.map(e => e.toLowerCase().trim()).includes(email.toLowerCase().trim());
+    }
+
     onAuthStateChanged(auth, (user) => {
-        currentUser = user;
         if (user) {
+            if (!emailEstaAutorizado(user.email)) {
+                alert(`⚠️ Acesso de Edição Negado!\n\nA conta (${user.email}) não está na lista de administradores desta viagem.\nVocê permanecerá apenas no modo de visualização.`);
+                signOut(auth);
+                currentUser = null;
+                authLoggedOut.style.display = 'flex';
+                authLoggedIn.style.display = 'none';
+                return;
+            }
+
+            currentUser = user;
             authLoggedOut.style.display = 'none';
             authLoggedIn.style.display = 'flex';
             userName.textContent = user.displayName || user.email;
             userPhoto.src = user.photoURL || 'https://via.placeholder.com/28';
         } else {
+            currentUser = null;
             authLoggedOut.style.display = 'flex';
             authLoggedIn.style.display = 'none';
         }
@@ -901,7 +929,11 @@
 
     function verificarAutenticado() {
         if (!currentUser) {
-            alert("⚠️ É necessário entrar com a sua conta Google no topo da página para salvar ou editar dados.");
+            alert("⚠️ É necessário entrar com uma conta Google autorizada no topo da página para salvar ou editar dados.");
+            return false;
+        }
+        if (!emailEstaAutorizado(currentUser.email)) {
+            alert("⚠️ Sua conta não possui permissão para modificar os dados da viagem.");
             return false;
         }
         return true;
@@ -1027,7 +1059,7 @@
     }
 
     // ==========================================
-    // CALENDÁRIO INTERATIVO & AGENDA DIÁRIA (Com Edição e Google Calendar)
+    // CALENDÁRIO INTERATIVO & AGENDA DIÁRIA
     // ==========================================
     let mesAtualCal = 2; // Março (0=Jan, 2=Mar)
     let anoAtualCal = 2027;
