@@ -281,12 +281,15 @@
             border-radius: 4px;
             width: 80px;
         }
-        .total-box {
-            text-align: right;
+        .total-box-orcamento {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
             padding: 15px;
             background: #2c3e50;
             color: white;
-            font-size: 1.3rem;
+            font-size: 1.15rem;
             font-weight: bold;
             border-radius: 0 0 8px 8px;
             margin-bottom: 20px;
@@ -478,17 +481,22 @@
                 <tr>
                     <th>Atividade & Dia</th>
                     <th>Valor Original</th>
-                    <th style="background-color: #dff9f3;">Valor em R$</th>
+                    <th style="background-color: #dff9f3;">Valor Total (R$)</th>
+                    <th style="background-color: #d5f5e3; color: #1e8449;">Valor por Pessoa (R$)</th>
                     <th>Tipo</th>
                     <th>Participantes / Divisão</th>
                     <th class="no-print">Ações</th>
                 </tr>
             </thead>
             <tbody id="tabela-orcamento">
-                <tr><td colspan="6">Carregando dados...</td></tr>
+                <tr><td colspan="7">Carregando dados...</td></tr>
             </tbody>
         </table>
-        <div class="total-box">Total Planejado: R$ <span id="total-orcamento">0.00</span></div>
+        
+        <div class="total-box-orcamento">
+            <div>Total Geral do Grupo: R$ <span id="total-orcamento">0.00</span></div>
+            <div style="color: #2ecc71;">Estimado por Pessoa: R$ <span id="total-orcamento-por-pessoa">0.00</span></div>
+        </div>
     </section>
 
     <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
@@ -610,6 +618,7 @@
 
     let currentUser = null;
     let totalReaisOrcamentoAtual = 0;
+    let totalParticipantesCount = 1;
 
     // ==========================================
     // SISTEMA DE AUTENTICAÇÃO
@@ -678,19 +687,25 @@
         const data = snapshot.val();
         
         if (data) {
-            Object.keys(data).forEach(key => {
+            const keys = Object.keys(data);
+            totalParticipantesCount = keys.length || 1;
+
+            keys.forEach(key => {
                 const nome = data[key].nome;
                 containerHtml.innerHTML += `<div class="badge-participante">${nome} <span onclick="window.excluirParticipante('${key}')" title="Remover">✖</span></div>`;
                 optionsHtml += `<option value="${nome}">${nome}</option>`;
                 checkboxesHtml += `<label><input type="checkbox" value="${nome}"> ${nome}</label>`;
             });
         } else {
+            totalParticipantesCount = 1;
             containerHtml.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Adicione os participantes acima para liberar as opções de divisão.</p>';
         }
 
         pagadorDespesa.innerHTML = optionsHtml;
         divOrcamento.innerHTML = checkboxesHtml;
         divDespesa.innerHTML = checkboxesHtml;
+
+        atualizarVisualOrcamento();
     });
 
     document.getElementById('form-participante').addEventListener('submit', (e) => {
@@ -977,7 +992,7 @@
     }
 
     // ==========================================
-    // ORÇAMENTO (PLANEJADO - ORDENADO POR DATA)
+    // ORÇAMENTO (PLANEJADO - COM VALOR POR PESSOA)
     // ==========================================
     const orcamentoRef = ref(db, 'orcamento');
     let csvOrcamento = [];
@@ -991,7 +1006,8 @@
     function atualizarVisualOrcamento() {
         const tabela = document.getElementById('tabela-orcamento');
         tabela.innerHTML = '';
-        let totalReais = 0;
+        let totalReaisGeral = 0;
+        let totalReaisPorPessoa = 0;
         csvOrcamento = [];
 
         if (orcamentoCache && Object.keys(orcamentoCache).length > 0) {
@@ -1008,7 +1024,26 @@
 
             orcamentoArray.forEach(d => {
                 const valorConvertido = converterParaBRL(d.valor, d.moeda);
-                totalReais += valorConvertido;
+                const tipoLabel = d.tipo || "Dividido";
+                const membrosLabel = d.dividido || "Todos do grupo";
+
+                // Cálculo do valor por pessoa
+                let valorIndividual = 0;
+                if (tipoLabel === "Dividido") {
+                    let numPessoas = totalParticipantesCount;
+                    if (membrosLabel !== "Todos do grupo") {
+                        const membros = membrosLabel.split(',').filter(m => m.trim().length > 0);
+                        numPessoas = membros.length > 0 ? membros.length : 1;
+                    }
+                    valorIndividual = valorConvertido / numPessoas;
+                    totalReaisGeral += valorConvertido;
+                } else {
+                    // Custo individual por pessoa
+                    valorIndividual = valorConvertido;
+                    totalReaisGeral += valorConvertido * totalParticipantesCount;
+                }
+
+                totalReaisPorPessoa += valorIndividual;
                 
                 let dataFormatada = "";
                 if (d.data) {
@@ -1016,16 +1051,22 @@
                     dataFormatada = ` (${partes[2]}/${partes[1]}/${partes[0]})`;
                 }
 
-                const tipoLabel = d.tipo || "Dividido";
-                const membrosLabel = d.dividido || "Todos do grupo";
-
-                csvOrcamento.push([`${d.desc}${dataFormatada}`, d.moeda, parseFloat(d.valor).toFixed(2), `R$ ${valorConvertido.toFixed(2)}`, tipoLabel, membrosLabel]);
+                csvOrcamento.push([
+                    `${d.desc}${dataFormatada}`, 
+                    d.moeda, 
+                    parseFloat(d.valor).toFixed(2), 
+                    `R$ ${valorConvertido.toFixed(2)}`, 
+                    `R$ ${valorIndividual.toFixed(2)}`, 
+                    tipoLabel, 
+                    membrosLabel
+                ]);
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${d.desc}</strong><br><small style="color: #666;">📅 ${d.data ? d.data.split('-').reverse().join('/') : 'Data não informada'}</small></td>
                     <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
                     <td style="background-color: #dff9f3;"><strong>R$ ${valorConvertido.toFixed(2)}</strong></td>
+                    <td style="background-color: #d5f5e3; color: #1e8449;"><strong>R$ ${valorIndividual.toFixed(2)}</strong></td>
                     <td><span style="font-size: 0.85rem; padding: 3px 8px; border-radius: 12px; background: ${tipoLabel === 'Individual' ? '#f39c12' : '#3498db'}; color: white;">${tipoLabel}</span></td>
                     <td>${membrosLabel}</td>
                     <td class="no-print">
@@ -1035,13 +1076,16 @@
                 `;
                 tabela.appendChild(tr);
             });
-            document.getElementById('total-orcamento').innerText = totalReais.toFixed(2);
+
+            document.getElementById('total-orcamento').innerText = totalReaisGeral.toFixed(2);
+            document.getElementById('total-orcamento-por-pessoa').innerText = totalReaisPorPessoa.toFixed(2);
         } else {
-            tabela.innerHTML = '<tr><td colspan="6">Nenhum item orçado até o momento.</td></tr>';
+            tabela.innerHTML = '<tr><td colspan="7">Nenhum item orçado até o momento.</td></tr>';
             document.getElementById('total-orcamento').innerText = '0.00';
+            document.getElementById('total-orcamento-por-pessoa').innerText = '0.00';
         }
         
-        totalReaisOrcamentoAtual = totalReais;
+        totalReaisOrcamentoAtual = totalReaisGeral;
         const totalGastoAtual = parseFloat(document.getElementById('total-despesa')?.innerText || "0") || 0;
         atualizarSaldoDisponivel(totalGastoAtual);
 
@@ -1111,7 +1155,7 @@
     });
 
     document.getElementById('export-orcamento-csv').addEventListener('click', () => {
-        exportarCSV("Orcamento_Planejado_LaPaz.csv", ["Atividade & Data", "Moeda Original", "Valor Original", "Valor em R$", "Tipo de Custo", "Participantes / Divisão"], csvOrcamento);
+        exportarCSV("Orcamento_Planejado_LaPaz.csv", ["Atividade & Data", "Moeda Original", "Valor Original", "Valor Total em R$", "Valor por Pessoa em R$", "Tipo de Custo", "Participantes / Divisão"], csvOrcamento);
     });
 
     // ==========================================
