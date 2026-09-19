@@ -584,7 +584,7 @@
     <!-- ORÇAMENTO (PLANEJAMENTO) -->
     <section id="orcamento">
         <h2>
-            📝 Orçamento (Planejado - Ordenado por Data)
+            📝 Orçamento (Planejado - Ordenado por Data e Hora)
             <div class="no-print">
                 <button class="btn-export" id="export-orcamento-csv">📥 Planilha</button>
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
@@ -594,6 +594,7 @@
         
         <form id="form-orcamento" class="form-group no-print">
             <input type="hidden" id="edit-id-orcamento">
+            <input type="hidden" id="hora-orcamento" value="00:00">
             
             <select id="select-roteiro-orcamento" style="flex: 2; min-width: 220px;">
                 <option value="">Selecione uma atividade pendente do Roteiro</option>
@@ -628,7 +629,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Atividade & Dia</th>
+                    <th>Atividade, Data & Hora</th>
                     <th>Valor Original</th>
                     <th style="background-color: #dff9f3;">Valor Total (R$)</th>
                     <th style="background-color: #d5f5e3; color: #1e8449;">Valor por Pessoa (R$)</th>
@@ -961,7 +962,6 @@
             grid.appendChild(vazio);
         }
 
-        // Mapear dias com atividades do roteiro
         const diasComAtividades = new Set();
         if (roteiroCache) {
             Object.values(roteiroCache).forEach(item => {
@@ -1001,7 +1001,6 @@
         const partes = dataSelecionadaCal.split('-');
         titulo.textContent = `📅 ${partes[2]}/${partes[1]}/${partes[0]}`;
 
-        // Coletar atividades do dia
         const atividadesDoDia = [];
         if (roteiroCache) {
             Object.keys(roteiroCache).forEach(k => {
@@ -1014,7 +1013,6 @@
 
         atividadesDoDia.sort((a, b) => (a.hora > b.hora ? 1 : -1));
 
-        // Slots de referência diária (Manhã, Tarde, Noite)
         const slotsReferencia = [
             { hora: "08:00", periodo: "Manhã" },
             { hora: "10:30", periodo: "Meio da Manhã" },
@@ -1043,7 +1041,6 @@
             });
         }
 
-        // Sugestões de horários vagos para preencher
         const horasOcupadas = atividadesDoDia.map(a => a.hora.substring(0, 2));
         const sugestoesVagas = slotsReferencia.filter(s => !horasOcupadas.includes(s.hora.substring(0, 2)));
 
@@ -1122,7 +1119,7 @@
                     pendentes++;
                     const partesData = item.data.split('-');
                     const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
-                    selectRoteiro.innerHTML += `<option value="${item.id}" data-desc="${item.desc}" data-data="${item.data}">[${dataFormatada}] ${item.desc}</option>`;
+                    selectRoteiro.innerHTML += `<option value="${item.id}" data-desc="${item.desc}" data-data="${item.data}" data-hora="${item.hora}">[${dataFormatada} ${item.hora}] ${item.desc}</option>`;
                 }
             });
 
@@ -1247,6 +1244,7 @@
         if(id && roteiroCache[id]) {
             document.getElementById('desc-orcamento').value = roteiroCache[id].desc;
             document.getElementById('data-orcamento').value = roteiroCache[id].data;
+            document.getElementById('hora-orcamento').value = roteiroCache[id].hora || "00:00";
         }
     });
 
@@ -1304,7 +1302,7 @@
     }
 
     // ==========================================
-    // ORÇAMENTO (PLANEJADO - COM VALOR POR PESSOA)
+    // ORÇAMENTO (PLANEJADO - ORDENADO POR DATA E HORA)
     // ==========================================
     const orcamentoRef = ref(db, 'orcamento');
     let csvOrcamento = [];
@@ -1323,15 +1321,26 @@
         csvOrcamento = [];
 
         if (orcamentoCache && Object.keys(orcamentoCache).length > 0) {
-            const orcamentoArray = Object.keys(orcamentoCache).map(key => ({
-                id: key,
-                ...orcamentoCache[key]
-            }));
+            const orcamentoArray = Object.keys(orcamentoCache).map(key => {
+                const item = orcamentoCache[key];
+                // Tenta puxar a hora cadastrada ou sincroniza com o roteiro se existir
+                let horaItem = item.hora || "00:00";
+                if (horaItem === "00:00" && roteiroCache) {
+                    const ativEncontrada = Object.values(roteiroCache).find(r => r.desc.trim().toLowerCase() === item.desc.trim().toLowerCase());
+                    if (ativEncontrada && ativEncontrada.hora) horaItem = ativEncontrada.hora;
+                }
+                return {
+                    id: key,
+                    ...item,
+                    hora: horaItem
+                };
+            });
 
+            // Ordenação estrita por Data + Hora cronológica
             orcamentoArray.sort((a, b) => {
-                const dataA = a.data ? new Date(a.data).getTime() : 0;
-                const dataB = b.data ? new Date(b.data).getTime() : 0;
-                return dataA - dataB;
+                const dtA = a.data ? `${a.data}T${a.hora || '00:00'}` : '1970-01-01T00:00';
+                const dtB = b.data ? `${b.data}T${b.hora || '00:00'}` : '1970-01-01T00:00';
+                return new Date(dtA) - new Date(dtB);
             });
 
             orcamentoArray.forEach(d => {
@@ -1358,7 +1367,7 @@
                 let dataFormatada = "";
                 if (d.data) {
                     const partes = d.data.split('-');
-                    dataFormatada = ` (${partes[2]}/${partes[1]}/${partes[0]})`;
+                    dataFormatada = ` (${partes[2]}/${partes[1]}/${partes[0]} às ${d.hora})`;
                 }
 
                 csvOrcamento.push([
@@ -1371,9 +1380,14 @@
                     membrosLabel
                 ]);
 
+                const partesD = d.data ? d.data.split('-').reverse().join('/') : 'Data não informada';
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${d.desc}</strong><br><small style="color: #666;">📅 ${d.data ? d.data.split('-').reverse().join('/') : 'Data não informada'}</small></td>
+                    <td>
+                        <strong>${d.desc}</strong><br>
+                        <small style="color: #666;">📅 ${partesD} &nbsp;|&nbsp; ⏰ ${d.hora}</small>
+                    </td>
                     <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
                     <td style="background-color: #dff9f3;"><strong>R$ ${valorConvertido.toFixed(2)}</strong></td>
                     <td style="background-color: #d5f5e3; color: #1e8449;"><strong>R$ ${valorIndividual.toFixed(2)}</strong></td>
@@ -1415,6 +1429,7 @@
                 
                 document.getElementById('desc-orcamento').value = d.desc;
                 document.getElementById('data-orcamento').value = d.data || '';
+                document.getElementById('hora-orcamento').value = d.hora || '00:00';
                 document.getElementById('moeda-orcamento').value = d.moeda;
                 document.getElementById('valor-orcamento').value = d.valor;
                 document.getElementById('tipo-custo-orcamento').value = d.tipo || "Dividido";
@@ -1443,6 +1458,7 @@
         const novoItem = {
             desc: document.getElementById('desc-orcamento').value,
             data: document.getElementById('data-orcamento').value,
+            hora: document.getElementById('hora-orcamento').value || "00:00",
             moeda: document.getElementById('moeda-orcamento').value,
             valor: document.getElementById('valor-orcamento').value,
             tipo: document.getElementById('tipo-custo-orcamento').value,
@@ -1459,13 +1475,14 @@
         
         document.getElementById('form-orcamento').reset();
         document.getElementById('edit-id-orcamento').value = '';
+        document.getElementById('hora-orcamento').value = '00:00';
         document.getElementById('select-roteiro-orcamento').value = '';
         setarDivisaoSelecionada('divisao-orcamento-container', '');
         atualizarSelectRoteiro();
     });
 
     document.getElementById('export-orcamento-csv').addEventListener('click', () => {
-        exportarCSV("Orcamento_Planejado_LaPaz.csv", ["Atividade & Data", "Moeda Original", "Valor Original", "Valor Total em R$", "Valor por Pessoa em R$", "Tipo de Custo", "Participantes / Divisão"], csvOrcamento);
+        exportarCSV("Orcamento_Planejado_LaPaz.csv", ["Atividade, Data & Hora", "Moeda Original", "Valor Original", "Valor Total em R$", "Valor por Pessoa em R$", "Tipo de Custo", "Participantes / Divisão"], csvOrcamento);
     });
 
     // ==========================================
