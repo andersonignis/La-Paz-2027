@@ -221,6 +221,20 @@
         .btn-agenda-edit:hover {
             background: #e67e22;
         }
+        .btn-agenda-calendar {
+            background: #4285f4;
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        .btn-agenda-calendar:hover {
+            background: #3367d6;
+        }
         .btn-preencher-slot {
             background: #27ae60;
             color: white;
@@ -306,6 +320,20 @@
         }
         .btn-link-roteiro:hover {
             background-color: #2980b9;
+        }
+        .btn-add-gcal {
+            display: inline-block;
+            background-color: #4285f4;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            text-decoration: none;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .btn-add-gcal:hover {
+            background-color: #3367d6;
         }
         .box-drive {
             background-color: #f8f9fa;
@@ -456,7 +484,7 @@
             font-size: 0.9rem;
         }
         @media print {
-            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio, .box-drive, .auth-bar, details summary, .painel-agenda-container { display: none !important; }
+            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio, .box-drive, .auth-bar, details summary, .painel-agenda-container, .btn-add-gcal { display: none !important; }
             details { display: block !important; }
             body { background-color: white; }
             .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
@@ -534,7 +562,7 @@
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
-        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios com horário de início e término. Se alterar data ou hora aqui, o orçamento atualiza sozinho!</p>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios com horário de início e término. Toque em "📅 Agenda" para enviar ao Google Calendar.</p>
         
         <form id="form-roteiro" class="form-group no-print">
             <input type="hidden" id="edit-id-roteiro">
@@ -794,6 +822,39 @@
     let totalParticipantesCount = 1;
 
     // ==========================================
+    // GERADOR DE LINK DO GOOGLE CALENDAR
+    // ==========================================
+    function gerarLinkGoogleAgenda(item) {
+        const dataPura = item.data.replace(/-/g, '');
+        const horaInicioPura = item.hora.replace(':', '') + '00';
+        
+        let horaFimPura = '';
+        if (item.horaFim && item.horaFim.includes(':')) {
+            horaFimPura = item.horaFim.replace(':', '') + '00';
+        } else {
+            // Se não tiver hora de fim, calcula 1h30 adiante
+            const partesHora = item.hora.split(':').map(Number);
+            let hFim = partesHora[0] + 1;
+            let mFim = partesHora[1] + 30;
+            if (mFim >= 60) {
+                hFim += Math.floor(mFim / 60);
+                mFim = mFim % 60;
+            }
+            if (hFim >= 24) hFim = 23;
+            horaFimPura = String(hFim).padStart(2, '0') + String(mFim).padStart(2, '0') + '00';
+        }
+
+        const datasFormatadas = `${dataPura}T${horaInicioPura}/${dataPura}T${horaFimPura}`;
+        const titulo = encodeURIComponent(item.desc + " - Viagem La Paz 🇧🇴");
+        let detalhes = encodeURIComponent("Atividade planejada da viagem para La Paz 2027.");
+        if (item.link) {
+            detalhes += encodeURIComponent("\n\nLink / Reserva: " + item.link);
+        }
+
+        return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${datasFormatadas}&details=${detalhes}&location=${encodeURIComponent("La Paz, Bolívia")}`;
+    }
+
+    // ==========================================
     // SISTEMA DE AUTENTICAÇÃO
     // ==========================================
     const authLoggedOut = document.getElementById('auth-logged-out');
@@ -954,7 +1015,7 @@
     }
 
     // ==========================================
-    // CALENDÁRIO INTERATIVO & AGENDA DIÁRIA (Com Edição Direta)
+    // CALENDÁRIO INTERATIVO & AGENDA DIÁRIA (Com Edição e Google Calendar)
     // ==========================================
     let mesAtualCal = 2; // Março (0=Jan, 2=Mar)
     let anoAtualCal = 2027;
@@ -1070,11 +1131,16 @@
                 const item = document.createElement('div');
                 item.className = 'timeline-item timeline-ocupado';
                 const horaFimTexto = ativ.horaFim ? ` às ${ativ.horaFim}` : '';
+                const urlGcal = gerarLinkGoogleAgenda(ativ);
+
                 item.innerHTML = `
                     <div style="flex: 1;">
                         <strong>⏰ ${ativ.hora}${horaFimTexto}</strong> - <span>${ativ.desc}</span>
                     </div>
-                    <button class="btn-agenda-edit" data-id="${ativ.id}">✏️ Editar</button>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <a href="${urlGcal}" target="_blank" rel="noopener noreferrer" class="btn-agenda-calendar" title="Adicionar ao Google Agenda">📅 Agenda</a>
+                        <button class="btn-agenda-edit" data-id="${ativ.id}">✏️ Editar</button>
+                    </div>
                 `;
                 container.appendChild(item);
             });
@@ -1145,7 +1211,7 @@
     });
 
     // ==========================================
-    // ROTEIRO (Com Início, Término, Conclusão e Sincronização)
+    // ROTEIRO (Com Início, Término, Conclusão, Google Calendar e Sincronização)
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
@@ -1218,6 +1284,7 @@
                 const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
                 const linkUrl = item.link ? item.link.trim() : '';
                 const horaFimTexto = item.horaFim ? ` às ${item.horaFim}` : '';
+                const urlGcal = gerarLinkGoogleAgenda(item);
                 
                 dadosRoteiroCSV.push([dataFormatada, item.hora, item.horaFim || '', item.desc, linkUrl, isConcluida ? "Sim" : "Não"]);
 
@@ -1238,7 +1305,8 @@
                             ${linkHtml}
                         </div>
                     </div>
-                    <div class="no-print" style="margin-top: 10px;">
+                    <div class="no-print" style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+                        <a href="${urlGcal}" target="_blank" rel="noopener noreferrer" class="btn-add-gcal" title="Salvar no Google Agenda">📅 Agenda</a>
                         <button class="btn-edit btn-edit-roteiro" data-id="${item.id}">Editar</button>
                         <button class="btn-delete btn-delete-roteiro" data-id="${item.id}">Excluir</button>
                     </div>
