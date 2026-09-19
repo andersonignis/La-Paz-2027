@@ -515,12 +515,13 @@
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
-        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios e marque o que for concluído para recolher da tela.</p>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios com horário de início e término e marque os concluídos para recolher da tela.</p>
         
         <form id="form-roteiro" class="form-group no-print">
             <input type="hidden" id="edit-id-roteiro">
-            <input type="date" id="data-roteiro" required>
-            <input type="text" id="hora-roteiro" placeholder="Horário (ex: 08:00)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" title="Formato HH:MM, ex: 08:30" required style="max-width: 140px;">
+            <input type="date" id="data-roteiro" required title="Data da atividade" style="max-width: 150px;">
+            <input type="text" id="hora-roteiro" placeholder="Início (ex: 08:00)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" title="Formato HH:MM, ex: 08:00" required style="max-width: 130px;">
+            <input type="text" id="hora-fim-roteiro" placeholder="Término (opcional)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" title="Formato HH:MM, ex: 11:30" style="max-width: 140px;">
             <input type="text" id="desc-roteiro" placeholder="Ex: Ônibus Transacreana para Brasiléia" required style="flex: 2; min-width: 200px;">
             <input type="url" id="link-roteiro" placeholder="Link / Reserva / Ingresso (opcional - https://...)" style="flex: 2; min-width: 200px;">
             <button type="submit" id="btn-salvar-roteiro">Adicionar Atividade</button>
@@ -934,7 +935,7 @@
     }
 
     // ==========================================
-    // CALENDÁRIO INTERATIVO & AGENDA DIÁRIA
+    // CALENDÁRIO INTERATIVO & AGENDA DIÁRIA (Com Início e Fim)
     // ==========================================
     let mesAtualCal = 2; // Março (0=Jan, 2=Mar)
     let anoAtualCal = 2027;
@@ -1016,6 +1017,7 @@
 
         atividadesDoDia.sort((a, b) => (a.hora > b.hora ? 1 : -1));
 
+        // Slots sugeridos de referência diária
         const slotsReferencia = [
             { hora: "08:00", periodo: "Manhã" },
             { hora: "10:30", periodo: "Meio da Manhã" },
@@ -1034,9 +1036,10 @@
             atividadesDoDia.forEach(ativ => {
                 const item = document.createElement('div');
                 item.className = 'timeline-item timeline-ocupado';
+                const horaFimTexto = ativ.horaFim ? ` às ${ativ.horaFim}` : '';
                 item.innerHTML = `
                     <div>
-                        <strong>⏰ ${ativ.hora}</strong> - <span>${ativ.desc}</span>
+                        <strong>⏰ ${ativ.hora}${horaFimTexto}</strong> - <span>${ativ.desc}</span>
                     </div>
                     <small style="font-weight: bold; color: #2980b9;">Ocupado</small>
                 `;
@@ -1044,8 +1047,20 @@
             });
         }
 
-        const horasOcupadas = atividadesDoDia.map(a => a.hora.substring(0, 2));
-        const sugestoesVagas = slotsReferencia.filter(s => !horasOcupadas.includes(s.hora.substring(0, 2)));
+        // Verifica se os slots sugeridos conflitam com o intervalo de alguma atividade
+        function horarioConflita(horaSlot) {
+            const minSlot = parseInt(horaSlot.split(':')[0], 10) * 60 + parseInt(horaSlot.split(':')[1], 10);
+            return atividadesDoDia.some(a => {
+                const minInicio = parseInt(a.hora.split(':')[0], 10) * 60 + parseInt(a.hora.split(':')[1], 10);
+                let minFim = minInicio + 90; // Default 1h30 se não tiver horaFim
+                if (a.horaFim) {
+                    minFim = parseInt(a.horaFim.split(':')[0], 10) * 60 + parseInt(a.horaFim.split(':')[1], 10);
+                }
+                return minSlot >= minInicio && minSlot < minFim;
+            });
+        }
+
+        const sugestoesVagas = slotsReferencia.filter(s => !horarioConflita(s.hora));
 
         if (sugestoesVagas.length > 0) {
             const headerVagos = document.createElement('div');
@@ -1071,6 +1086,7 @@
                     const data = e.target.getAttribute('data-data');
                     document.getElementById('data-roteiro').value = data;
                     document.getElementById('hora-roteiro').value = hora;
+                    document.getElementById('hora-fim-roteiro').value = '';
                     document.getElementById('desc-roteiro').focus();
                     window.scrollTo(0, document.getElementById('roteiro').offsetTop);
                 });
@@ -1090,7 +1106,7 @@
     });
 
     // ==========================================
-    // ROTEIRO (Com Conclusão e Menu Recolhível)
+    // ROTEIRO (Com Início, Término e Conclusão)
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
@@ -1162,8 +1178,9 @@
                 const partesData = item.data.split('-');
                 const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
                 const linkUrl = item.link ? item.link.trim() : '';
+                const horaFimTexto = item.horaFim ? ` às ${item.horaFim}` : '';
                 
-                dadosRoteiroCSV.push([dataFormatada, item.hora, item.desc, linkUrl, isConcluida ? "Sim" : "Não"]);
+                dadosRoteiroCSV.push([dataFormatada, item.hora, item.horaFim || '', item.desc, linkUrl, isConcluida ? "Sim" : "Não"]);
 
                 const div = document.createElement('div');
                 div.className = `card-roteiro ${isConcluida ? 'concluido' : ''}`;
@@ -1177,7 +1194,7 @@
                     <div style="flex: 1; min-width: 200px; display: flex; align-items: flex-start; gap: 12px;">
                         <input type="checkbox" class="chk-concluir-roteiro" data-id="${item.id}" ${isConcluida ? 'checked' : ''} style="margin-top: 5px; transform: scale(1.3); cursor: pointer;" title="Marcar como concluída">
                         <div>
-                            <strong style="color: #2c3e50;">📅 ${dataFormatada} &nbsp; | &nbsp; ⏰ ${item.hora}</strong><br>
+                            <strong style="color: #2c3e50;">📅 ${dataFormatada} &nbsp; | &nbsp; ⏰ ${item.hora}${horaFimTexto}</strong><br>
                             <span class="titulo-atividade" style="font-size: 1.1rem; display: inline-block; margin-top: 3px;">${item.desc}</span>
                             ${linkHtml}
                         </div>
@@ -1228,6 +1245,7 @@
                     const id = e.target.getAttribute('data-id');
                     document.getElementById('data-roteiro').value = data[id].data;
                     document.getElementById('hora-roteiro').value = data[id].hora;
+                    document.getElementById('hora-fim-roteiro').value = data[id].horaFim || '';
                     document.getElementById('desc-roteiro').value = data[id].desc;
                     document.getElementById('link-roteiro').value = data[id].link || '';
                     document.getElementById('edit-id-roteiro').value = id;
@@ -1259,6 +1277,7 @@
         const novaAtividade = {
             data: document.getElementById('data-roteiro').value,
             hora: document.getElementById('hora-roteiro').value,
+            horaFim: document.getElementById('hora-fim-roteiro').value.trim(),
             desc: document.getElementById('desc-roteiro').value,
             link: document.getElementById('link-roteiro').value.trim()
         };
@@ -1276,7 +1295,7 @@
     });
 
     document.getElementById('export-roteiro-csv').addEventListener('click', () => {
-        exportarCSV("Roteiro_LaPaz_2027.csv", ["Data", "Hora", "Descrição", "Link / Reserva", "Concluído"], dadosRoteiroCSV);
+        exportarCSV("Roteiro_LaPaz_2027.csv", ["Data", "Hora Início", "Hora Término", "Descrição", "Link / Reserva", "Concluído"], dadosRoteiroCSV);
     });
 
     // ==========================================
@@ -1305,7 +1324,7 @@
     }
 
     // ==========================================
-    // ORÇAMENTO (PLANEJADO - ORDENADO POR DATA E HORA)
+    // ORÇAMENTO (PLANEJADO - ORDENADO POR DATA E HORA DE INÍCIO)
     // ==========================================
     const orcamentoRef = ref(db, 'orcamento');
     let csvOrcamento = [];
@@ -1493,7 +1512,6 @@
     let dadosDespesasDB = {};
     let csvDespesas = [];
 
-    // Helper para preencher data/hora atual no formulário de despesa
     function resetarFormDespesaPadrao() {
         const agora = new Date();
         const dataHoje = agora.toISOString().split('T')[0];
@@ -1518,7 +1536,6 @@
         csvDespesas = [];
 
         if (dadosDespesasDB) {
-            // Converte em array e ordena por Data + Hora cronológica
             const despesasArray = Object.keys(dadosDespesasDB).map(key => ({
                 id: key,
                 ...dadosDespesasDB[key]
