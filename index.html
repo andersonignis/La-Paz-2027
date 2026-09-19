@@ -483,7 +483,6 @@
         <p class="aviso-nuvem">Toque em qualquer dia com marcação para ver os passeios e horários ainda livres para novas atrações.</p>
         
         <div class="painel-agenda-container">
-            <!-- CALENDÁRIO -->
             <div class="box-agenda-card">
                 <div class="cal-header">
                     <button id="btn-mes-ant">◀</button>
@@ -493,7 +492,6 @@
                 <div class="cal-grid" id="grid-calendario"></div>
             </div>
 
-            <!-- AGENDA DO DIA ESPECÍFICO -->
             <div class="box-agenda-card">
                 <div style="border-bottom: 1px solid #edf2f7; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <strong style="color: #2980b9;" id="titulo-dia-selecionado">📅 13/03/2027</strong>
@@ -654,17 +652,22 @@
     <!-- DESPESAS (REALIZADAS) -->
     <section id="despesas">
         <h2>
-            💸 Despesas (Realizadas)
+            💸 Despesas (Realizadas - Lançamentos)
             <div class="no-print">
                 <button class="btn-export" id="export-despesas-csv">📥 Planilha</button>
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
-        <p class="aviso-nuvem no-print">✅ Lance aqui os gastos pagos durante a viagem.</p>
+        <p class="aviso-nuvem no-print">✅ Lance aqui os gastos pagos durante a viagem com a data e horário em que foram pagos.</p>
         
         <form id="form-despesa" class="form-group no-print">
             <input type="hidden" id="edit-id-despesa">
-            <input type="text" id="desc-despesa" placeholder="O que foi pago na viagem?" required style="flex: 2; min-width: 180px;">
+            
+            <input type="date" id="data-despesa" required title="Data do pagamento" style="max-width: 150px;">
+            <input type="text" id="hora-despesa" placeholder="Horário (ex: 14:30)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" title="Formato HH:MM, ex: 14:30" required style="max-width: 140px;">
+            
+            <input type="text" id="desc-despesa" placeholder="O que foi pago? (Ex: Almoço Mercado Central, Táxi)" required style="flex: 2; min-width: 200px;">
+            
             <select id="moeda-despesa" required style="flex: 0.8; min-width: 90px;">
                 <option value="R$">BRL (R$)</option>
                 <option value="Bs">BOB (Bs - Bolivianos)</option>
@@ -687,7 +690,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Gasto Realizado</th>
+                    <th>Gasto Realizado, Data & Hora</th>
                     <th>Valor Original</th>
                     <th style="background-color: #fdebd0;">Valor em R$</th>
                     <th>Quem Pagou?</th>
@@ -1323,7 +1326,6 @@
         if (orcamentoCache && Object.keys(orcamentoCache).length > 0) {
             const orcamentoArray = Object.keys(orcamentoCache).map(key => {
                 const item = orcamentoCache[key];
-                // Tenta puxar a hora cadastrada ou sincroniza com o roteiro se existir
                 let horaItem = item.hora || "00:00";
                 if (horaItem === "00:00" && roteiroCache) {
                     const ativEncontrada = Object.values(roteiroCache).find(r => r.desc.trim().toLowerCase() === item.desc.trim().toLowerCase());
@@ -1336,7 +1338,6 @@
                 };
             });
 
-            // Ordenação estrita por Data + Hora cronológica
             orcamentoArray.sort((a, b) => {
                 const dtA = a.data ? `${a.data}T${a.hora || '00:00'}` : '1970-01-01T00:00';
                 const dtB = b.data ? `${b.data}T${b.hora || '00:00'}` : '1970-01-01T00:00';
@@ -1486,11 +1487,24 @@
     });
 
     // ==========================================
-    // DESPESAS REAIS
+    // DESPESAS REAIS (Com Data, Hora e Ordenação)
     // ==========================================
     const despesasRef = ref(db, 'despesas');
     let dadosDespesasDB = {};
     let csvDespesas = [];
+
+    // Helper para preencher data/hora atual no formulário de despesa
+    function resetarFormDespesaPadrao() {
+        const agora = new Date();
+        const dataHoje = agora.toISOString().split('T')[0];
+        const horaMin = String(agora.getHours()).padStart(2, '0') + ":" + String(agora.getMinutes()).padStart(2, '0');
+        
+        const inputData = document.getElementById('data-despesa');
+        const inputHora = document.getElementById('hora-despesa');
+        if (inputData && !inputData.value) inputData.value = dataHoje;
+        if (inputHora && !inputHora.value) inputHora.value = horaMin;
+    }
+    resetarFormDespesaPadrao();
 
     onValue(despesasRef, (snapshot) => {
         dadosDespesasDB = snapshot.val() || null;
@@ -1504,23 +1518,49 @@
         csvDespesas = [];
 
         if (dadosDespesasDB) {
-            Object.keys(dadosDespesasDB).forEach(key => {
-                const d = dadosDespesasDB[key];
+            // Converte em array e ordena por Data + Hora cronológica
+            const despesasArray = Object.keys(dadosDespesasDB).map(key => ({
+                id: key,
+                ...dadosDespesasDB[key]
+            }));
+
+            despesasArray.sort((a, b) => {
+                const dtA = a.data ? `${a.data}T${a.hora || '00:00'}` : '1970-01-01T00:00';
+                const dtB = b.data ? `${b.data}T${b.hora || '00:00'}` : '1970-01-01T00:00';
+                return new Date(dtA) - new Date(dtB);
+            });
+
+            despesasArray.forEach(d => {
                 const valorConvertido = converterParaBRL(d.valor, d.moeda);
                 totalReais += valorConvertido;
                 
-                csvDespesas.push([d.desc, d.moeda, parseFloat(d.valor).toFixed(2), `R$ ${valorConvertido.toFixed(2)}`, d.pagador, d.dividido]);
+                const partesD = d.data ? d.data.split('-').reverse().join('/') : 'Data não informada';
+                const horaD = d.hora || '00:00';
+
+                csvDespesas.push([
+                    d.desc, 
+                    partesD,
+                    horaD,
+                    d.moeda, 
+                    parseFloat(d.valor).toFixed(2), 
+                    `R$ ${valorConvertido.toFixed(2)}`, 
+                    d.pagador, 
+                    d.dividido
+                ]);
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${d.desc}</td>
+                    <td>
+                        <strong>${d.desc}</strong><br>
+                        <small style="color: #666;">📅 ${partesD} &nbsp;|&nbsp; ⏰ ${horaD}</small>
+                    </td>
                     <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
                     <td style="background-color: #fdebd0;"><strong>R$ ${valorConvertido.toFixed(2)}</strong></td>
                     <td><strong>${d.pagador}</strong></td>
                     <td>${d.dividido}</td>
                     <td class="no-print">
-                        <button class="btn-edit btn-edit-tabela-despesas" data-id="${key}">Editar</button>
-                        <button class="btn-delete btn-delete-tabela-despesas" data-id="${key}">Excluir</button>
+                        <button class="btn-edit btn-edit-tabela-despesas" data-id="${d.id}">Editar</button>
+                        <button class="btn-delete btn-delete-tabela-despesas" data-id="${d.id}">Excluir</button>
                     </td>
                 `;
                 tabela.appendChild(tr);
@@ -1545,6 +1585,8 @@
                 const id = e.target.getAttribute('data-id');
                 const d = dadosDespesasDB[id];
                 document.getElementById('desc-despesa').value = d.desc;
+                document.getElementById('data-despesa').value = d.data || '';
+                document.getElementById('hora-despesa').value = d.hora || '12:00';
                 document.getElementById('moeda-despesa').value = d.moeda;
                 document.getElementById('valor-despesa').value = d.valor;
                 
@@ -1572,6 +1614,8 @@
 
         const novaDespesa = {
             desc: document.getElementById('desc-despesa').value,
+            data: document.getElementById('data-despesa').value,
+            hora: document.getElementById('hora-despesa').value || "12:00",
             moeda: document.getElementById('moeda-despesa').value,
             valor: document.getElementById('valor-despesa').value,
             pagador: document.getElementById('pagador-despesa').value,
@@ -1588,10 +1632,11 @@
         document.getElementById('form-despesa').reset();
         document.getElementById('edit-id-despesa').value = '';
         setarDivisaoSelecionada('divisao-despesa-container', '');
+        resetarFormDespesaPadrao();
     });
 
     document.getElementById('export-despesas-csv').addEventListener('click', () => {
-        exportarCSV("Despesas_Reais_LaPaz.csv", ["Descrição", "Moeda Original", "Valor Original", "Valor em R$", "Quem Pagou", "Dividido Com"], csvDespesas);
+        exportarCSV("Despesas_Reais_LaPaz.csv", ["Descrição", "Data", "Hora", "Moeda Original", "Valor Original", "Valor em R$", "Quem Pagou", "Dividido Com"], csvDespesas);
     });
 
     // CÂMBIO
