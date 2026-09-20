@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>La Paz, vamos subir! 🇧🇴</title>
+    
+    <!-- Configurações do App (PWA) -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://live.staticflickr.com/92/205083804_60315ff3f8_o.jpg">
+
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -919,6 +927,17 @@
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
     // ==========================================
+    // REGISTRO DO SERVICE WORKER (PWA OFFLINE)
+    // ==========================================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(reg => console.log("Service Worker registrado com sucesso!"))
+                .catch(err => console.log("Falha ao registrar Service Worker:", err));
+        });
+    }
+
+    // ==========================================
     // LISTA DE E-MAILS AUTORIZADOS A EDITAR
     // ==========================================
     const EMAILS_AUTORIZADOS = [
@@ -946,40 +965,7 @@
     let totalParticipantesCount = 1;
 
     // ==========================================
-    // CONTROLE DE NAVEGAÇÃO FLUTUANTE (FAB & TOPO)
-    // ==========================================
-    const btnToggleMenu = document.getElementById('btn-toggle-menu');
-    const fabMenu = document.getElementById('fab-menu');
-    const btnVoltarTopo = document.getElementById('btn-voltar-topo');
-
-    btnToggleMenu.addEventListener('click', (e) => {
-        e.stopPropagation();
-        fabMenu.classList.toggle('active');
-        btnToggleMenu.textContent = fabMenu.classList.contains('active') ? '✕' : '☰';
-    });
-
-    btnVoltarTopo.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // Fecha o menu retrátil ao clicar em qualquer item
-    fabMenu.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', () => {
-            fabMenu.classList.remove('active');
-            btnToggleMenu.textContent = '☰';
-        });
-    });
-
-    // Fecha ao clicar fora
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.fab-container')) {
-            fabMenu.classList.remove('active');
-            btnToggleMenu.textContent = '☰';
-        }
-    });
-
-    // ==========================================
-    // GERADOR DE LINK DO GOOGLE CALENDAR (SEM LOCAL FORÇADO)
+    // GERADOR DE LINK DO GOOGLE CALENDAR
     // ==========================================
     function detectarLocalizacao(texto) {
         const t = (texto || '').toLowerCase();
@@ -1723,7 +1709,7 @@
                     let numPessoas = totalParticipantesCount;
                     if (membrosLabel !== "Todos do grupo") {
                         const membros = membrosLabel.split(',').filter(m => m.trim().length > 0);
-                        numPessoas = membros.length > 0 ? membros.length : 1;
+                        numPessoas = membros.length > 0 ? numPessoas = membros.length : 1;
                     }
                     valorIndividual = valorConvertido / numPessoas;
                     totalReaisGeral += valorConvertido;
