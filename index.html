@@ -809,7 +809,8 @@
     // LISTA DE E-MAILS AUTORIZADOS A EDITAR
     // ==========================================
     const EMAILS_AUTORIZADOS = [
-        "anderson.ignis@hotmail.com"
+        "anderson.ignis@hotmail.com",
+        "veronicadossantospaiva@gmail.com"
     ];
 
     const firebaseConfig = {
@@ -841,7 +842,7 @@
         if (t.includes('epitaciolândia') || t.includes('epitaciolandia')) return 'Epitaciolândia, AC, Brasil';
         if (t.includes('cobija')) return 'Cobija, Pando, Bolívia';
         if (t.includes('la paz') || t.includes('tiwanaku') || t.includes('copacabana')) return 'La Paz, Bolívia';
-        return ''; // Deixa em branco se não identificar cidade
+        return '';
     }
 
     function gerarLinkGoogleAgenda(item) {
@@ -1855,10 +1856,6 @@
     document.getElementById('export-despesas-csv').addEventListener('click', () => {
         exportarCSV("Despesas_Reais_LaPaz.csv", ["Descrição", "Data", "Hora", "Moeda Original", "Valor Original", "Valor em R$", "Quem Pagou", "Dividido Com"], csvDespesas);
     });
-
-    // CÂMBIO
-    inputCotacaoBs.addEventListener('input', () => { atualizarVisualOrcamento(); atualizarVisualDespesas(); });
-    inputCotacaoUsd.addEventListener('input', () => { atualizarVisualOrcamento(); atualizarVisualDespesas(); });
 
     // ==========================================
     // CHECKLIST
