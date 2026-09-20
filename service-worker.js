@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lapaz-cache-v2';
+const CACHE_NAME = 'lapaz-cache-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -20,7 +20,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignora chamadas de autenticação e banco de dados do Firebase
+  // Ignora chamadas do Firebase
   if (
     event.request.url.includes('firebaseio.com') ||
     event.request.url.includes('googleapis.com') ||
