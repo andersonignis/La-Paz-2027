@@ -118,18 +118,33 @@
             margin-top: 30px;
         }
 
-        /* CONTENTOR DE TABELAS RESPONSIVAS */
+        /* CONTENTOR DE TABELAS RESPONSIVAS COM LINHA CONGELADA (STICKY) */
         .tabela-responsiva {
             width: 100%;
             overflow-x: auto;
+            overflow-y: auto;
+            max-height: 420px;
             -webkit-overflow-scrolling: touch;
             margin-top: 10px;
             border-radius: 6px;
             border: 1px solid #e2e8f0;
+            background: #fff;
+            position: relative;
         }
         .tabela-responsiva table {
             margin-top: 0;
-            min-width: 650px;
+            min-width: 680px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        /* CONGELAR A PRIMEIRA LINHA */
+        .tabela-responsiva thead th {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background-color: #e2e8f0;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.08);
+            border-top: none;
         }
 
         /* NAVEGAÇÃO FLUTUANTE RETRÁTIL (FAB) */
@@ -473,13 +488,18 @@
 
         table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             font-size: 0.95rem;
         }
         th, td {
             padding: 10px;
-            border: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+            border-right: 1px solid #ddd;
             text-align: left;
+        }
+        th:first-child, td:first-child {
+            border-left: 1px solid #ddd;
         }
         th { background-color: #ecf0f1; }
         .aviso-nuvem {
@@ -609,6 +629,8 @@
             details { display: block !important; }
             body { background-color: white; }
             .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
+            .tabela-responsiva { max-height: none; overflow: visible; border: none; }
+            .tabela-responsiva thead th { position: static; box-shadow: none; }
             section { margin-bottom: 30px; page-break-inside: avoid; }
         }
     </style>
@@ -821,13 +843,13 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Atividade, Data & Hora</th>
-                        <th>Valor Original</th>
-                        <th style="background-color: #dff9f3;">Valor Total (R$)</th>
-                        <th style="background-color: #d5f5e3; color: #1e8449;">Valor por Pessoa (R$)</th>
-                        <th>Tipo</th>
-                        <th>Participantes / Divisão</th>
-                        <th class="no-print">Ações</th>
+                        <th style="background-color: #e2e8f0;">Atividade, Data & Hora</th>
+                        <th style="background-color: #e2e8f0;">Valor Original</th>
+                        <th style="background-color: #cbf3ea;">Valor Total (R$)</th>
+                        <th style="background-color: #bbf0d6; color: #1e8449;">Valor por Pessoa (R$)</th>
+                        <th style="background-color: #e2e8f0;">Tipo</th>
+                        <th style="background-color: #e2e8f0;">Participantes / Divisão</th>
+                        <th class="no-print" style="background-color: #e2e8f0;">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabela-orcamento">
@@ -886,12 +908,12 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Gasto Realizado, Data & Hora</th>
-                        <th>Valor Original</th>
-                        <th style="background-color: #fdebd0;">Valor em R$</th>
-                        <th>Quem Pagou?</th>
-                        <th>Dividido com?</th>
-                        <th class="no-print">Ações</th>
+                        <th style="background-color: #e2e8f0;">Gasto Realizado, Data & Hora</th>
+                        <th style="background-color: #e2e8f0;">Valor Original</th>
+                        <th style="background-color: #fce2b8;">Valor em R$</th>
+                        <th style="background-color: #e2e8f0;">Quem Pagou?</th>
+                        <th style="background-color: #e2e8f0;">Dividido com?</th>
+                        <th class="no-print" style="background-color: #e2e8f0;">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabela-despesas">
@@ -945,7 +967,7 @@
     Feito para a melhor viagem de 2027!
 </footer>
 
-<!-- SCRIPT AUTÓNOMO OFFLINE (EXECUTA ANTES DE QUALQUER REQUISIÇÃO DE REDE) -->
+<!-- SCRIPT AUTÔNOMO OFFLINE (EXECUTA ANTES DE QUALQUER REQUISIÇÃO DE REDE) -->
 <script>
     (function carregarTudoOfflineImediato() {
         function ler(chave) {
