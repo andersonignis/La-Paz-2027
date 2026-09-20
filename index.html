@@ -932,7 +932,7 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./service-worker.js')
-                .then(reg => console.log("Service Worker registrado com sucesso!"))
+                .then(() => console.log("Service Worker ativo."))
                 .catch(err => console.log("Falha ao registrar Service Worker:", err));
         });
     }
@@ -965,7 +965,58 @@
     let totalParticipantesCount = 1;
 
     // ==========================================
-    // GERADOR DE LINK DO GOOGLE CALENDAR
+    // CAMADA DE PERSISTÊNCIA OFFLINE (LOCALSTORAGE)
+    // ==========================================
+    function salvarCacheLocal(chave, dados) {
+        try {
+            localStorage.setItem('lapaz_' + chave, JSON.stringify(dados));
+        } catch (e) {
+            console.warn("Erro ao salvar cache local", e);
+        }
+    }
+
+    function carregarCacheLocal(chave) {
+        try {
+            const raw = localStorage.getItem('lapaz_' + chave);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // ==========================================
+    // CONTROLE DE NAVEGAÇÃO FLUTUANTE (FAB & TOPO)
+    // ==========================================
+    const btnToggleMenu = document.getElementById('btn-toggle-menu');
+    const fabMenu = document.getElementById('fab-menu');
+    const btnVoltarTopo = document.getElementById('btn-voltar-topo');
+
+    btnToggleMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fabMenu.classList.toggle('active');
+        btnToggleMenu.textContent = fabMenu.classList.contains('active') ? '✕' : '☰';
+    });
+
+    btnVoltarTopo.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    fabMenu.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            fabMenu.classList.remove('active');
+            btnToggleMenu.textContent = '☰';
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.fab-container')) {
+            fabMenu.classList.remove('active');
+            btnToggleMenu.textContent = '☰';
+        }
+    });
+
+    // ==========================================
+    // GERADOR DE LINK DO GOOGLE CALENDAR (SEM LOCAL FORÇADO)
     // ==========================================
     function detectarLocalizacao(texto) {
         const t = (texto || '').toLowerCase();
@@ -1071,7 +1122,7 @@
     }
 
     // ==========================================
-    // SISTEMA DE PARTICIPANTES
+    // PARTICIPANTES (COM SUPORTE OFFLINE)
     // ==========================================
     const participantesRef = ref(db, 'participantes');
     
@@ -1082,7 +1133,7 @@
         }
     };
 
-    onValue(participantesRef, (snapshot) => {
+    function renderizarParticipantes(data) {
         const containerHtml = document.getElementById('lista-participantes');
         containerHtml.innerHTML = '';
         
@@ -1093,9 +1144,7 @@
         const divDespesa = document.getElementById('divisao-despesa-container');
         let checkboxesHtml = '<label><input type="checkbox" value="Todos do grupo"> Todos do grupo</label>';
 
-        const data = snapshot.val();
-        
-        if (data) {
+        if (data && Object.keys(data).length > 0) {
             const keys = Object.keys(data);
             totalParticipantesCount = keys.length || 1;
 
@@ -1115,6 +1164,12 @@
         divDespesa.innerHTML = checkboxesHtml;
 
         atualizarVisualOrcamento();
+    }
+
+    onValue(participantesRef, (snapshot) => {
+        const data = snapshot.val();
+        salvarCacheLocal('participantes', data);
+        renderizarParticipantes(data);
     });
 
     document.getElementById('form-participante').addEventListener('submit', (e) => {
@@ -1154,7 +1209,7 @@
     }
 
     // ==========================================
-    // CÂMBIO (COM PERSISTÊNCIA NO FIREBASE)
+    // CÂMBIO (COM SUPORTE OFFLINE)
     // ==========================================
     const inputCotacaoBs = document.getElementById('cotacao-bs');
     const inputCotacaoUsd = document.getElementById('cotacao-usd');
@@ -1162,14 +1217,21 @@
     const cambioRef = ref(db, 'cambio');
     let timeoutSalvarCambio = null;
 
-    onValue(cambioRef, (snapshot) => {
-        const dadosCambio = snapshot.val();
+    function aplicarDadosCambio(dadosCambio) {
         if (dadosCambio) {
             if (dadosCambio.bs) inputCotacaoBs.value = parseFloat(dadosCambio.bs).toFixed(2);
             if (dadosCambio.usd) inputCotacaoUsd.value = parseFloat(dadosCambio.usd).toFixed(2);
-            if (statusCambio) statusCambio.textContent = "✓ Sincronizado";
             atualizarVisualOrcamento();
             atualizarVisualDespesas();
+        }
+    }
+
+    onValue(cambioRef, (snapshot) => {
+        const dadosCambio = snapshot.val();
+        if (dadosCambio) {
+            salvarCacheLocal('cambio', dadosCambio);
+            aplicarDadosCambio(dadosCambio);
+            if (statusCambio) statusCambio.textContent = "✓ Sincronizado";
         }
     });
 
@@ -1180,12 +1242,15 @@
 
         if (statusCambio) statusCambio.textContent = "Salvando...";
 
-        set(cambioRef, {
+        const payload = {
             bs: bsVal,
             usd: usdVal,
             atualizadoPor: currentUser ? currentUser.email : "desconhecido",
             dataAtualizacao: new Date().toISOString()
-        }).then(() => {
+        };
+        salvarCacheLocal('cambio', payload);
+
+        set(cambioRef, payload).then(() => {
             if (statusCambio) statusCambio.textContent = "✓ Salvo para o grupo";
             setTimeout(() => { if (statusCambio) statusCambio.textContent = ""; }, 2500);
         });
@@ -1203,8 +1268,8 @@
 
     function getCotacoes() {
         return {
-            bs: parseFloat(inputCotacaoBs.value) || 0,
-            usd: parseFloat(inputCotacaoUsd.value) || 0
+            bs: parseFloat(inputCotacaoBs.value) || 0.85,
+            usd: parseFloat(inputCotacaoUsd.value) || 5.50
         };
     }
 
@@ -1281,7 +1346,7 @@
         const diasComAtividades = new Set();
         if (roteiroCache) {
             Object.values(roteiroCache).forEach(item => {
-                if (item.data) diasComAtividades.add(item.data);
+                if (item && item.data) diasComAtividades.add(item.data);
             });
         }
 
@@ -1321,7 +1386,7 @@
         if (roteiroCache) {
             Object.keys(roteiroCache).forEach(k => {
                 const ativ = roteiroCache[k];
-                if (ativ.data === dataSelecionadaCal) {
+                if (ativ && ativ.data === dataSelecionadaCal) {
                     atividadesDoDia.push({ id: k, ...ativ });
                 }
             });
@@ -1428,7 +1493,7 @@
     });
 
     // ==========================================
-    // ROTEIRO (Com Próximas Atividades e Concluídas Recolhíveis)
+    // ROTEIRO (COM SUPORTE OFFLINE)
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
@@ -1443,7 +1508,7 @@
         if (orcamentoCache) {
             Object.keys(orcamentoCache).forEach(k => {
                 const item = orcamentoCache[k];
-                if (k !== idAtividadeSendoEditada) {
+                if (k !== idAtividadeSendoEditada && item && item.desc) {
                     nomesJaOrcados.add(item.desc.trim().toLowerCase());
                 }
             });
@@ -1470,7 +1535,7 @@
         }
     }
 
-    onValue(roteiroRef, (snapshot) => {
+    function renderizarRoteiro(data) {
         const listaPendentes = document.getElementById('lista-roteiro');
         const listaConcluidas = document.getElementById('lista-roteiro-concluidas');
         const summaryPendentes = document.getElementById('summary-pendentes');
@@ -1480,14 +1545,13 @@
         listaConcluidas.innerHTML = '';
         dadosRoteiroCSV = [];
         
-        const data = snapshot.val();
         roteiroCache = data || {};
         
         renderizarCalendario();
         renderizarAgendaDoDia();
         atualizarSelectRoteiro();
 
-        if (data) {
+        if (data && Object.keys(data).length > 0) {
             const roteiroArray = Object.keys(data).map(key => ({ id: key, ...data[key] }));
             roteiroArray.sort((a, b) => new Date(`${a.data}T${a.hora}`) - new Date(`${b.data}T${b.hora}`));
 
@@ -1577,6 +1641,12 @@
             summaryPendentes.textContent = `📌 Próximas Atividades (0)`;
             summaryConcluidos.textContent = `✅ Atividades Concluídas (0)`;
         }
+    }
+
+    onValue(roteiroRef, (snapshot) => {
+        const data = snapshot.val();
+        salvarCacheLocal('roteiro', data);
+        renderizarRoteiro(data);
     });
 
     document.getElementById('select-roteiro-orcamento').addEventListener('change', (e) => {
@@ -1660,17 +1730,11 @@
     }
 
     // ==========================================
-    // ORÇAMENTO (PLANEJADO - ORDENADO POR DATA E HORA DE INÍCIO)
+    // ORÇAMENTO (COM SUPORTE OFFLINE)
     // ==========================================
     const orcamentoRef = ref(db, 'orcamento');
     let csvOrcamento = [];
     
-    onValue(orcamentoRef, (snapshot) => {
-        orcamentoCache = snapshot.val() || {};
-        atualizarVisualOrcamento();
-        atualizarSelectRoteiro();
-    });
-
     function atualizarVisualOrcamento() {
         const tabela = document.getElementById('tabela-orcamento');
         tabela.innerHTML = '';
@@ -1683,7 +1747,7 @@
                 const item = orcamentoCache[key];
                 let horaItem = item.hora || "00:00";
                 if (horaItem === "00:00" && roteiroCache) {
-                    const ativEncontrada = Object.values(roteiroCache).find(r => r.desc.trim().toLowerCase() === item.desc.trim().toLowerCase());
+                    const ativEncontrada = Object.values(roteiroCache).find(r => r && r.desc && r.desc.trim().toLowerCase() === item.desc.trim().toLowerCase());
                     if (ativEncontrada && ativEncontrada.hora) horaItem = ativEncontrada.hora;
                 }
                 return {
@@ -1709,7 +1773,7 @@
                     let numPessoas = totalParticipantesCount;
                     if (membrosLabel !== "Todos do grupo") {
                         const membros = membrosLabel.split(',').filter(m => m.trim().length > 0);
-                        numPessoas = membros.length > 0 ? numPessoas = membros.length : 1;
+                        numPessoas = membros.length > 0 ? membros.length : 1;
                     }
                     valorIndividual = valorConvertido / numPessoas;
                     totalReaisGeral += valorConvertido;
@@ -1801,6 +1865,14 @@
         });
     }
 
+    onValue(orcamentoRef, (snapshot) => {
+        const data = snapshot.val();
+        salvarCacheLocal('orcamento', data);
+        orcamentoCache = data || {};
+        atualizarVisualOrcamento();
+        atualizarSelectRoteiro();
+    });
+
     document.getElementById('form-orcamento').addEventListener('submit', (e) => {
         e.preventDefault();
         if (!verificarAutenticado()) return;
@@ -1842,7 +1914,7 @@
     });
 
     // ==========================================
-    // DESPESAS REAIS (Com Data, Hora e Ordenação)
+    // DESPESAS REAIS (COM SUPORTE OFFLINE)
     // ==========================================
     const despesasRef = ref(db, 'despesas');
     let dadosDespesasDB = {};
@@ -1860,18 +1932,13 @@
     }
     resetarFormDespesaPadrao();
 
-    onValue(despesasRef, (snapshot) => {
-        dadosDespesasDB = snapshot.val() || null;
-        atualizarVisualDespesas();
-    });
-
     function atualizarVisualDespesas() {
         const tabela = document.getElementById('tabela-despesas');
         tabela.innerHTML = '';
         let totalReais = 0;
         csvDespesas = [];
 
-        if (dadosDespesasDB) {
+        if (dadosDespesasDB && Object.keys(dadosDespesasDB).length > 0) {
             const despesasArray = Object.keys(dadosDespesasDB).map(key => ({
                 id: key,
                 ...dadosDespesasDB[key]
@@ -1955,6 +2022,13 @@
         });
     }
 
+    onValue(despesasRef, (snapshot) => {
+        const data = snapshot.val();
+        salvarCacheLocal('despesas', data);
+        dadosDespesasDB = data || {};
+        atualizarVisualDespesas();
+    });
+
     document.getElementById('form-despesa').addEventListener('submit', (e) => {
         e.preventDefault();
         if (!verificarAutenticado()) return;
@@ -1993,15 +2067,15 @@
     });
 
     // ==========================================
-    // CHECKLIST
+    // CHECKLIST (COM SUPORTE OFFLINE)
     // ==========================================
     const checklistRef = ref(db, 'checklist');
-    onValue(checklistRef, (snapshot) => {
+
+    function renderizarChecklist(data) {
         const listaChecklist = document.getElementById('lista-checklist');
         listaChecklist.innerHTML = '';
-        const data = snapshot.val();
         
-        if (data) {
+        if (data && Object.keys(data).length > 0) {
             Object.keys(data).forEach(key => {
                 const item = data[key];
                 const div = document.createElement('div');
@@ -2034,6 +2108,12 @@
         } else {
             listaChecklist.innerHTML = '<p>Nenhum item adicionado ao checklist.</p>';
         }
+    }
+
+    onValue(checklistRef, (snapshot) => {
+        const data = snapshot.val();
+        salvarCacheLocal('checklist', data);
+        renderizarChecklist(data);
     });
 
     document.getElementById('form-checklist').addEventListener('submit', (e) => {
@@ -2042,6 +2122,35 @@
         push(checklistRef, { desc: document.getElementById('desc-checklist').value, concluido: false });
         document.getElementById('form-checklist').reset();
     });
+
+    // ==========================================
+    // CARREGAMENTO INICIAL INSTANTÂNEO DO CACHE
+    // (Garante que tudo apareça mesmo no Modo Avião)
+    // ==========================================
+    const cacheCambio = carregarCacheLocal('cambio');
+    if (cacheCambio) aplicarDadosCambio(cacheCambio);
+
+    const cachePart = carregarCacheLocal('participantes');
+    if (cachePart) renderizarParticipantes(cachePart);
+
+    const cacheRoteiro = carregarCacheLocal('roteiro');
+    if (cacheRoteiro) renderizarRoteiro(cacheRoteiro);
+
+    const cacheOrcamento = carregarCacheLocal('orcamento');
+    if (cacheOrcamento) {
+        orcamentoCache = cacheOrcamento;
+        atualizarVisualOrcamento();
+        atualizarSelectRoteiro();
+    }
+
+    const cacheDespesas = carregarCacheLocal('despesas');
+    if (cacheDespesas) {
+        dadosDespesasDB = cacheDespesas;
+        atualizarVisualDespesas();
+    }
+
+    const cacheChecklist = carregarCacheLocal('checklist');
+    if (cacheChecklist) renderizarChecklist(cacheChecklist);
 
 </script>
 </body>
