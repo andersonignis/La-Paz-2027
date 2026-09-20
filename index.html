@@ -13,6 +13,13 @@
     <link rel="apple-touch-icon" href="https://live.staticflickr.com/92/205083804_60315ff3f8_o.jpg">
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7f6;
@@ -99,6 +106,7 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: calc(100% - 20px);
         }
         h2 {
             color: #2980b9;
@@ -108,6 +116,20 @@
             justify-content: space-between;
             align-items: center;
             margin-top: 30px;
+        }
+
+        /* CONTENTOR DE TABELAS RESPONSIVAS */
+        .tabela-responsiva {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 10px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        .tabela-responsiva table {
+            margin-top: 0;
+            min-width: 650px;
         }
 
         /* NAVEGAÇÃO FLUTUANTE RETRÁTIL (FAB) */
@@ -452,7 +474,6 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
             font-size: 0.95rem;
         }
         th, td {
@@ -796,22 +817,24 @@
             <button type="submit" id="btn-salvar-orcamento">Adicionar ao Orçamento</button>
         </form>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Atividade, Data & Hora</th>
-                    <th>Valor Original</th>
-                    <th style="background-color: #dff9f3;">Valor Total (R$)</th>
-                    <th style="background-color: #d5f5e3; color: #1e8449;">Valor por Pessoa (R$)</th>
-                    <th>Tipo</th>
-                    <th>Participantes / Divisão</th>
-                    <th class="no-print">Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-orcamento">
-                <tr><td colspan="7">Carregando dados...</td></tr>
-            </tbody>
-        </table>
+        <div class="tabela-responsiva">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Atividade, Data & Hora</th>
+                        <th>Valor Original</th>
+                        <th style="background-color: #dff9f3;">Valor Total (R$)</th>
+                        <th style="background-color: #d5f5e3; color: #1e8449;">Valor por Pessoa (R$)</th>
+                        <th>Tipo</th>
+                        <th>Participantes / Divisão</th>
+                        <th class="no-print">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-orcamento">
+                    <tr><td colspan="7">Carregando dados...</td></tr>
+                </tbody>
+            </table>
+        </div>
         
         <div class="total-box-orcamento">
             <div>Total Geral do Grupo: R$ <span id="total-orcamento">0.00</span></div>
@@ -859,21 +882,23 @@
             <button type="submit" id="btn-salvar-despesa">Adicionar Despesa Real</button>
         </form>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Gasto Realizado, Data & Hora</th>
-                    <th>Valor Original</th>
-                    <th style="background-color: #fdebd0;">Valor em R$</th>
-                    <th>Quem Pagou?</th>
-                    <th>Dividido com?</th>
-                    <th class="no-print">Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-despesas">
-                <tr><td colspan="6">Carregando dados...</td></tr>
-            </tbody>
-        </table>
+        <div class="tabela-responsiva">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Gasto Realizado, Data & Hora</th>
+                        <th>Valor Original</th>
+                        <th style="background-color: #fdebd0;">Valor em R$</th>
+                        <th>Quem Pagou?</th>
+                        <th>Dividido com?</th>
+                        <th class="no-print">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-despesas">
+                    <tr><td colspan="6">Carregando dados...</td></tr>
+                </tbody>
+            </table>
+        </div>
         
         <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; margin-bottom: 25px;">
             <div style="flex: 1; min-width: 180px; padding: 15px; background: #d35400; color: white; border-radius: 8px; text-align: center;">
@@ -920,7 +945,7 @@
     Feito para a melhor viagem de 2027!
 </footer>
 
-<!-- SCRIPT AUTÔNOMO OFFLINE (EXECUTA ANTES DE QUALQUER COISA DA REDE) -->
+<!-- SCRIPT AUTÓNOMO OFFLINE (EXECUTA ANTES DE QUALQUER REQUISIÇÃO DE REDE) -->
 <script>
     (function carregarTudoOfflineImediato() {
         function ler(chave) {
@@ -985,7 +1010,6 @@
             const tabela = document.getElementById('tabela-orcamento');
             if (tabela) {
                 tabela.innerHTML = '';
-                let total = 0;
                 const oArr = Object.keys(orcamento).map(k => ({id: k, ...orcamento[k]}));
                 oArr.sort((a, b) => new Date(a.data + 'T' + (a.hora||'00:00')) - new Date(b.data + 'T' + (b.hora||'00:00')));
                 
@@ -1026,7 +1050,7 @@
     })();
 </script>
 
-<!-- Firebase & Scripts Modulares (Sincronização em Nuvem quando houver conexão) -->
+<!-- Firebase & Scripts Modulares -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
@@ -1366,7 +1390,7 @@
         link.remove();
     }
 
-    let mesAtualCal = 2; // Março (0=Jan, 2=Mar)
+    let mesAtualCal = 2;
     let anoAtualCal = 2027;
     let dataSelecionadaCal = "2027-03-13";
 
@@ -1830,7 +1854,7 @@
                     let numPessoas = totalParticipantesCount;
                     if (membrosLabel !== "Todos do grupo") {
                         const membros = membrosLabel.split(',').filter(m => m.trim().length > 0);
-                        numPessoas = membros.length > 0 ? numPessoas = membros.length : 1;
+                        numPessoas = membros.length > 0 ? membros.length : 1;
                     }
                     valorIndividual = valorConvertido / numPessoas;
                     totalReaisGeral += valorConvertido;
