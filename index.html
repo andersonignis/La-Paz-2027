@@ -968,7 +968,6 @@
 
 <!-- SCRIPT AUTÓNOMO OFFLINE E DESBLOQUEIO DE ROTAÇÃO -->
 <script>
-    // Desbloqueia a rotação em tempo de execução
     try {
         if (screen.orientation && screen.orientation.unlock) {
             screen.orientation.unlock();
@@ -1405,19 +1404,23 @@
         return val;
     }
 
+    // EXPORTAÇÃO CSV COMPATÍVEL COM EXCEL E GOOGLE SHEETS COM BOM UTF-8
     function exportarCSV(nomeArquivo, cabecalhos, linhas) {
-        let csvContent = "data:text/csv;charset=utf-8," + cabecalhos.join(",") + "\n";
+        let csvContent = cabecalhos.join(";") + "\r\n";
         linhas.forEach(linha => {
-            const linhaLimpa = linha.map(item => `"${String(item).replace(/"/g, '""')}"`);
-            csvContent += linhaLimpa.join(",") + "\n";
+            const linhaLimpa = linha.map(item => `"${String(item ?? '').replace(/"/g, '""')}"`);
+            csvContent += linhaLimpa.join(";") + "\r\n";
         });
-        const encodedUri = encodeURI(csvContent);
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
+        link.setAttribute("href", url);
         link.setAttribute("download", nomeArquivo);
         document.body.appendChild(link);
         link.click();
         link.remove();
+        URL.revokeObjectURL(url);
     }
 
     let mesAtualCal = 2;
