@@ -623,14 +623,24 @@
             color: #7f8c8d;
             font-size: 0.9rem;
         }
+
+        /* REGRAS GERAIS DE IMPRESSÃO */
         @media print {
-            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio, .box-drive, .auth-bar, details summary, .painel-agenda-container, .btn-add-gcal, .fab-container { display: none !important; }
+            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio, .box-drive, .auth-bar, details summary, .painel-agenda-container, .btn-add-gcal, .fab-container, hr { display: none !important; }
             details { display: block !important; }
+            details[open] summary { display: none !important; }
             body { background-color: white; }
-            .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
-            .tabela-responsiva { max-height: none; overflow: visible; border: none; }
-            .tabela-responsiva thead th { position: static; box-shadow: none; }
-            section { margin-bottom: 30px; page-break-inside: avoid; }
+            .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; width: 100%; }
+            .tabela-responsiva { max-height: none !important; overflow: visible !important; border: none !important; }
+            .tabela-responsiva thead th { position: static !important; box-shadow: none !important; }
+            
+            /* FILTRAGEM DINÂMICA: IMPRIME APENAS A SEÇÃO SELECIONADA */
+            body.print-only-roteiro section:not(#roteiro) { display: none !important; }
+            body.print-only-orcamento section:not(#orcamento) { display: none !important; }
+            body.print-only-despesas section:not(#despesas) { display: none !important; }
+            
+            section { margin-bottom: 20px; page-break-inside: auto; }
+            tr { page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -720,7 +730,7 @@
             📅 Roteiro da Viagem
             <div class="no-print">
                 <button class="btn-export" id="export-roteiro-csv">📥 Planilha</button>
-                <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
+                <button class="btn-export" onclick="imprimirSecao('roteiro')">🖨️ PDF</button>
             </div>
         </h2>
         <p class="aviso-nuvem no-print">✅ Sincronização ativada: Toque nas abas recolhíveis abaixo para abrir ou fechar as atividades e economizar espaço na tela.</p>
@@ -799,7 +809,7 @@
             📝 Orçamento (Planejado - Ordenado por Data e Hora)
             <div class="no-print">
                 <button class="btn-export" id="export-orcamento-csv">📥 Planilha</button>
-                <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
+                <button class="btn-export" onclick="imprimirSecao('orcamento')">🖨️ PDF</button>
             </div>
         </h2>
         <p class="aviso-nuvem no-print">✅ Selecione a atividade do roteiro, o dia, valor e defina se é custo dividido ou individual.</p>
@@ -871,7 +881,7 @@
             💸 Despesas (Realizadas - Lançamentos)
             <div class="no-print">
                 <button class="btn-export" id="export-despesas-csv">📥 Planilha</button>
-                <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
+                <button class="btn-export" onclick="imprimirSecao('despesas')">🖨️ PDF</button>
             </div>
         </h2>
         <p class="aviso-nuvem no-print">✅ Lance aqui os gastos pagos durante a viagem com a data e horário em que foram pagos.</p>
@@ -966,7 +976,32 @@
     Feito para a melhor viagem de 2027!
 </footer>
 
-<!-- SCRIPT AUTÓNOMO OFFLINE E DESBLOQUEIO DE ROTAÇÃO -->
+<!-- FUNÇÃO PARA IMPRIMIR APENAS A SEÇÃO SELECIONADA -->
+<script>
+    function imprimirSecao(secaoId) {
+        // Se for o roteiro, abre as abas recolhíveis para que nada fique oculto na impressão
+        if (secaoId === 'roteiro') {
+            const p = document.getElementById('details-pendentes');
+            const c = document.getElementById('details-concluidos');
+            if (p) p.open = true;
+            if (c) c.open = true;
+        }
+
+        // Aplica a classe que oculta as outras seções
+        document.body.classList.remove('print-only-roteiro', 'print-only-orcamento', 'print-only-despesas');
+        document.body.classList.add('print-only-' + secaoId);
+
+        // Chama a janela de impressão nativa
+        window.print();
+
+        // Remove a classe de filtro logo após fechar a impressão
+        window.addEventListener('afterprint', () => {
+            document.body.classList.remove('print-only-' + secaoId);
+        }, { once: true });
+    }
+</script>
+
+<!-- SCRIPT AUTÔNOMO OFFLINE E DESBLOQUEIO DE ROTAÇÃO -->
 <script>
     try {
         if (screen.orientation && screen.orientation.unlock) {
@@ -1404,7 +1439,6 @@
         return val;
     }
 
-    // EXPORTAÇÃO CSV COMPATÍVEL COM EXCEL E GOOGLE SHEETS COM BOM UTF-8
     function exportarCSV(nomeArquivo, cabecalhos, linhas) {
         let csvContent = cabecalhos.join(";") + "\r\n";
         linhas.forEach(linha => {
