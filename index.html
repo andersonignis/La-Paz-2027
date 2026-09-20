@@ -11,6 +11,7 @@
             color: #333;
             margin: 0;
             padding: 0;
+            scroll-behavior: smooth;
         }
         .auth-bar {
             background-color: #1a252f;
@@ -99,6 +100,87 @@
             justify-content: space-between;
             align-items: center;
             margin-top: 30px;
+        }
+
+        /* NAVEGAÇÃO FLUTUANTE RETRÁTIL (FAB) */
+        .fab-container {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        .fab-menu {
+            display: none;
+            flex-direction: column;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+            padding: 8px;
+            gap: 4px;
+            min-width: 190px;
+            border: 1px solid #e2e8f0;
+            animation: fadeInMenu 0.2s ease-out;
+        }
+        @keyframes fadeInMenu {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fab-menu.active {
+            display: flex;
+        }
+        .fab-menu a {
+            color: #2c3e50;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.15s;
+        }
+        .fab-menu a:hover {
+            background: #f0f7fb;
+            color: #2980b9;
+        }
+        .fab-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-fab {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            transition: transform 0.15s, background 0.2s;
+            outline: none;
+        }
+        .btn-fab:hover {
+            transform: scale(1.08);
+        }
+        .btn-fab-menu {
+            background: #2980b9;
+        }
+        .btn-fab-menu:hover {
+            background: #1f6391;
+        }
+        .btn-fab-topo {
+            background: #34495e;
+        }
+        .btn-fab-topo:hover {
+            background: #2c3e50;
         }
 
         /* PAINEL CALENDÁRIO & AGENDA */
@@ -494,7 +576,7 @@
             font-size: 0.9rem;
         }
         @media print {
-            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio, .box-drive, .auth-bar, details summary, .painel-agenda-container, .btn-add-gcal { display: none !important; }
+            header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio, .box-drive, .auth-bar, details summary, .painel-agenda-container, .btn-add-gcal, .fab-container { display: none !important; }
             details { display: block !important; }
             body { background-color: white; }
             .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
@@ -504,7 +586,25 @@
 </head>
 <body>
 
-<div class="auth-bar no-print">
+<!-- NAVEGAÇÃO FLUTUANTE RETRÁTIL & TOPO -->
+<div class="fab-container no-print">
+    <div class="fab-menu" id="fab-menu">
+        <a href="#calendario-agenda">🗓️ Calendário & Agenda</a>
+        <a href="#roteiro">📅 Roteiro</a>
+        <a href="#documentos">📁 Documentos</a>
+        <a href="#participantes">👥 Participantes</a>
+        <a href="#orcamento">📝 Orçamento</a>
+        <a href="#despesas">💸 Despesas Reais</a>
+        <a href="#mapas">🗺️ Mapa</a>
+        <a href="#checklist">✅ Checklist</a>
+    </div>
+    <div class="fab-actions">
+        <button id="btn-voltar-topo" class="btn-fab btn-fab-topo" title="Voltar ao topo">⬆</button>
+        <button id="btn-toggle-menu" class="btn-fab btn-fab-menu" title="Menu de Seções">☰</button>
+    </div>
+</div>
+
+<div class="auth-bar no-print" id="topo-pagina">
     <div id="auth-logged-out">
         <span>🔒 Modo somente leitura</span>
         <button id="btn-login-google" class="btn-auth">🔑 Entrar com Google</button>
@@ -846,7 +946,40 @@
     let totalParticipantesCount = 1;
 
     // ==========================================
-    // GERADOR DE LINK DO GOOGLE CALENDAR
+    // CONTROLE DE NAVEGAÇÃO FLUTUANTE (FAB & TOPO)
+    // ==========================================
+    const btnToggleMenu = document.getElementById('btn-toggle-menu');
+    const fabMenu = document.getElementById('fab-menu');
+    const btnVoltarTopo = document.getElementById('btn-voltar-topo');
+
+    btnToggleMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fabMenu.classList.toggle('active');
+        btnToggleMenu.textContent = fabMenu.classList.contains('active') ? '✕' : '☰';
+    });
+
+    btnVoltarTopo.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Fecha o menu retrátil ao clicar em qualquer item
+    fabMenu.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            fabMenu.classList.remove('active');
+            btnToggleMenu.textContent = '☰';
+        });
+    });
+
+    // Fecha ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.fab-container')) {
+            fabMenu.classList.remove('active');
+            btnToggleMenu.textContent = '☰';
+        }
+    });
+
+    // ==========================================
+    // GERADOR DE LINK DO GOOGLE CALENDAR (SEM LOCAL FORÇADO)
     // ==========================================
     function detectarLocalizacao(texto) {
         const t = (texto || '').toLowerCase();
