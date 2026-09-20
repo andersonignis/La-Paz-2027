@@ -137,7 +137,6 @@
             border-collapse: separate;
             border-spacing: 0;
         }
-        /* CONGELAR A PRIMEIRA LINHA */
         .tabela-responsiva thead th {
             position: sticky;
             top: 0;
@@ -967,8 +966,17 @@
     Feito para a melhor viagem de 2027!
 </footer>
 
-<!-- SCRIPT AUTÔNOMO OFFLINE (EXECUTA ANTES DE QUALQUER REQUISIÇÃO DE REDE) -->
+<!-- SCRIPT AUTÓNOMO OFFLINE E DESBLOQUEIO DE ROTAÇÃO -->
 <script>
+    // Desbloqueia a rotação em tempo de execução
+    try {
+        if (screen.orientation && screen.orientation.unlock) {
+            screen.orientation.unlock();
+        }
+    } catch (e) {
+        console.warn("Screen orientation unlock não disponível:", e);
+    }
+
     (function carregarTudoOfflineImediato() {
         function ler(chave) {
             try {
