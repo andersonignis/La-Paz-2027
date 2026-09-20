@@ -459,20 +459,29 @@
             border-radius: 0 0 8px 8px;
             margin-bottom: 20px;
         }
-        details.concluidos-container {
-            margin-top: 25px;
+        details.concluidos-container, details.pendentes-container {
+            margin-top: 15px;
             background: #f8f9fa;
             border: 1px solid #e2e8f0;
             border-radius: 6px;
             padding: 12px 15px;
         }
-        details.concluidos-container summary {
+        details.pendentes-container {
+            border-left: 4px solid #3498db;
+        }
+        details.concluidos-container {
+            border-left: 4px solid #95a5a6;
+        }
+        details summary {
             font-weight: bold;
             font-size: 1.05rem;
             color: #4a5568;
             cursor: pointer;
             user-select: none;
             outline: none;
+        }
+        details.pendentes-container summary:hover {
+            color: #2980b9;
         }
         details.concluidos-container summary:hover {
             color: #2b6cb0;
@@ -564,7 +573,7 @@
                 <button class="btn-export" onclick="window.print()">🖨️ PDF</button>
             </div>
         </h2>
-        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione passeios com horário de início e término. Toque em "📅 Agenda" para enviar ao Google Calendar.</p>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Toque nas abas recolhíveis abaixo para abrir ou fechar as atividades e economizar espaço na tela.</p>
         
         <form id="form-roteiro" class="form-group no-print">
             <input type="hidden" id="edit-id-roteiro">
@@ -576,9 +585,13 @@
             <button type="submit" id="btn-salvar-roteiro">Adicionar Atividade</button>
         </form>
 
-        <h3 style="color: #2c3e50; margin-top: 25px; margin-bottom: 10px; font-size: 1.15rem;">📌 Próximas Atividades</h3>
-        <div id="lista-roteiro"><p>Carregando roteiro...</p></div>
+        <!-- PRÓXIMAS ATIVIDADES RECOLHÍVEIS -->
+        <details class="pendentes-container" id="details-pendentes" open>
+            <summary id="summary-pendentes">📌 Próximas Atividades (0)</summary>
+            <div id="lista-roteiro" style="margin-top: 15px;"><p>Carregando roteiro...</p></div>
+        </details>
 
+        <!-- ATIVIDADES CONCLUÍDAS RECOLHÍVEIS -->
         <details class="concluidos-container" id="details-concluidos">
             <summary id="summary-concluidos">✅ Atividades Concluídas (0)</summary>
             <div id="lista-roteiro-concluidas" style="margin-top: 15px;"></div>
@@ -833,7 +846,7 @@
     let totalParticipantesCount = 1;
 
     // ==========================================
-    // GERADOR DE LINK DO GOOGLE CALENDAR (SEM LOCAL FORÇADO)
+    // GERADOR DE LINK DO GOOGLE CALENDAR
     // ==========================================
     function detectarLocalizacao(texto) {
         const t = (texto || '').toLowerCase();
@@ -1296,7 +1309,7 @@
     });
 
     // ==========================================
-    // ROTEIRO (Com Início, Término, Conclusão, Google Calendar e Sincronização)
+    // ROTEIRO (Com Próximas Atividades e Concluídas Recolhíveis)
     // ==========================================
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
@@ -1341,6 +1354,7 @@
     onValue(roteiroRef, (snapshot) => {
         const listaPendentes = document.getElementById('lista-roteiro');
         const listaConcluidas = document.getElementById('lista-roteiro-concluidas');
+        const summaryPendentes = document.getElementById('summary-pendentes');
         const summaryConcluidos = document.getElementById('summary-concluidos');
         
         listaPendentes.innerHTML = '';
@@ -1404,6 +1418,7 @@
                 }
             });
 
+            summaryPendentes.textContent = `📌 Próximas Atividades (${qtdPendentes})`;
             summaryConcluidos.textContent = `✅ Atividades Concluídas (${qtdConcluidas})`;
 
             if (qtdPendentes === 0) {
@@ -1440,6 +1455,7 @@
         } else {
             listaPendentes.innerHTML = '<p>Nenhuma atividade cadastrada.</p>';
             listaConcluidas.innerHTML = '<p style="color: #7f8c8d;">Nenhuma atividade cadastrada.</p>';
+            summaryPendentes.textContent = `📌 Próximas Atividades (0)`;
             summaryConcluidos.textContent = `✅ Atividades Concluídas (0)`;
         }
     });
