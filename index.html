@@ -979,7 +979,6 @@
 <!-- FUNÇÃO PARA IMPRIMIR APENAS A SEÇÃO SELECIONADA -->
 <script>
     function imprimirSecao(secaoId) {
-        // Se for o roteiro, abre as abas recolhíveis para que nada fique oculto na impressão
         if (secaoId === 'roteiro') {
             const p = document.getElementById('details-pendentes');
             const c = document.getElementById('details-concluidos');
@@ -987,21 +986,18 @@
             if (c) c.open = true;
         }
 
-        // Aplica a classe que oculta as outras seções
         document.body.classList.remove('print-only-roteiro', 'print-only-orcamento', 'print-only-despesas');
         document.body.classList.add('print-only-' + secaoId);
 
-        // Chama a janela de impressão nativa
         window.print();
 
-        // Remove a classe de filtro logo após fechar a impressão
         window.addEventListener('afterprint', () => {
             document.body.classList.remove('print-only-' + secaoId);
         }, { once: true });
     }
 </script>
 
-<!-- SCRIPT AUTÔNOMO OFFLINE E DESBLOQUEIO DE ROTAÇÃO -->
+<!-- SCRIPT AUTÔNOMO OFFLINE COM CONVERSÃO DE VALORES E TOTAIS -->
 <script>
     try {
         if (screen.orientation && screen.orientation.unlock) {
@@ -1020,19 +1016,33 @@
         }
 
         const cambio = ler('cambio');
+        let cotBs = 0.85;
+        let cotUsd = 5.50;
         if (cambio) {
+            if (cambio.bs) cotBs = parseFloat(cambio.bs) || 0.85;
+            if (cambio.usd) cotUsd = parseFloat(cambio.usd) || 5.50;
             const inBs = document.getElementById('cotacao-bs');
             const inUsd = document.getElementById('cotacao-usd');
-            if (inBs && cambio.bs) inBs.value = parseFloat(cambio.bs).toFixed(2);
-            if (inUsd && cambio.usd) inUsd.value = parseFloat(cambio.usd).toFixed(2);
+            if (inBs) inBs.value = cotBs.toFixed(2);
+            if (inUsd) inUsd.value = cotUsd.toFixed(2);
+        }
+
+        function converterOffline(valor, moeda) {
+            const val = parseFloat(valor) || 0;
+            if (moeda === 'Bs') return val * cotBs;
+            if (moeda === 'US$') return val * cotUsd;
+            return val;
         }
 
         const participantes = ler('participantes');
+        let totalPessoas = 1;
         if (participantes) {
             const containerHtml = document.getElementById('lista-participantes');
             if (containerHtml) {
                 containerHtml.innerHTML = '';
-                Object.keys(participantes).forEach(k => {
+                const chaves = Object.keys(participantes);
+                totalPessoas = chaves.length || 1;
+                chaves.forEach(k => {
                     containerHtml.innerHTML += '<div class="badge-participante">' + participantes[k].nome + '</div>';
                 });
             }
@@ -1069,6 +1079,9 @@
             }
         }
 
+        let totalGeralOrcado = 0;
+        let totalPorPessoaOrcado = 0;
+
         const orcamento = ler('orcamento');
         if (orcamento) {
             const tabela = document.getElementById('tabela-orcamento');
@@ -1078,25 +1091,89 @@
                 oArr.sort((a, b) => new Date(a.data + 'T' + (a.hora||'00:00')) - new Date(b.data + 'T' + (b.hora||'00:00')));
                 
                 oArr.forEach(d => {
+                    const valorConvertido = converterOffline(d.valor, d.moeda);
+                    const tipoLabel = d.tipo || "Dividido";
+                    const membrosLabel = d.dividido || "Todos do grupo";
+
+                    let valorIndividual = 0;
+                    if (tipoLabel === "Dividido") {
+                        let numPessoas = totalPessoas;
+                        if (membrosLabel !== "Todos do grupo") {
+                            const membros = membrosLabel.split(',').filter(m => m.trim().length > 0);
+                            numPessoas = membros.length > 0 ? membros.length : 1;
+                        }
+                        valorIndividual = valorConvertido / numPessoas;
+                        totalGeralOrcado += valorConvertido;
+                    } else {
+                        valorIndividual = valorConvertido;
+                        totalGeralOrcado += valorConvertido * totalPessoas;
+                    }
+
+                    totalPorPessoaOrcado += valorIndividual;
+
                     const tr = document.createElement('tr');
                     const partesD = d.data ? d.data.split('-').reverse().join('/') : '';
-                    tr.innerHTML = '<td><strong>' + d.desc + '</strong><br><small>📅 ' + partesD + ' | ⏰ ' + (d.hora||'') + '</small></td><td><strong>' + d.moeda + '</strong> ' + parseFloat(d.valor).toFixed(2) + '</td><td>-</td><td>-</td><td>' + (d.tipo||'Dividido') + '</td><td>' + (d.dividido||'') + '</td><td></td>';
+                    tr.innerHTML = `
+                        <td><strong>${d.desc}</strong><br><small>📅 ${partesD} | ⏰ ${d.hora || ''}</small></td>
+                        <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
+                        <td style="background-color: #dff9f3;"><strong>R$ ${valorConvertido.toFixed(2)}</strong></td>
+                        <td style="background-color: #d5f5e3; color: #1e8449;"><strong>R$ ${valorIndividual.toFixed(2)}</strong></td>
+                        <td><span style="font-size: 0.85rem; padding: 3px 8px; border-radius: 12px; background: ${tipoLabel === 'Individual' ? '#f39c12' : '#3498db'}; color: white;">${tipoLabel}</span></td>
+                        <td>${membrosLabel}</td>
+                        <td></td>
+                    `;
                     tabela.appendChild(tr);
                 });
+
+                const elTot = document.getElementById('total-orcamento');
+                const elTotPess = document.getElementById('total-orcamento-por-pessoa');
+                const elRef = document.getElementById('ref-orcamento');
+                if (elTot) elTot.innerText = totalGeralOrcado.toFixed(2);
+                if (elTotPess) elTotPess.innerText = totalPorPessoaOrcado.toFixed(2);
+                if (elRef) elRef.innerText = totalGeralOrcado.toFixed(2);
             }
         }
 
+        let totalGeralGasto = 0;
         const despesas = ler('despesas');
         if (despesas) {
             const tabelaD = document.getElementById('tabela-despesas');
             if (tabelaD) {
                 tabelaD.innerHTML = '';
-                Object.keys(despesas).forEach(k => {
-                    const d = despesas[k];
+                const dArr = Object.keys(despesas).map(k => ({id: k, ...despesas[k]}));
+                dArr.sort((a, b) => new Date((a.data||'') + 'T' + (a.hora||'00:00')) - new Date((b.data||'') + 'T' + (b.hora||'00:00')));
+
+                dArr.forEach(d => {
+                    const valorConvertido = converterOffline(d.valor, d.moeda);
+                    totalGeralGasto += valorConvertido;
+                    const partesD = d.data ? d.data.split('-').reverse().join('/') : '';
                     const tr = document.createElement('tr');
-                    tr.innerHTML = '<td><strong>' + d.desc + '</strong></td><td><strong>' + d.moeda + '</strong> ' + parseFloat(d.valor).toFixed(2) + '</td><td>-</td><td>' + d.pagador + '</td><td>' + d.dividido + '</td><td></td>';
+                    tr.innerHTML = `
+                        <td><strong>${d.desc}</strong><br><small>📅 ${partesD} | ⏰ ${d.hora || ''}</small></td>
+                        <td><strong>${d.moeda}</strong> ${parseFloat(d.valor).toFixed(2)}</td>
+                        <td style="background-color: #fdebd0;"><strong>R$ ${valorConvertido.toFixed(2)}</strong></td>
+                        <td><strong>${d.pagador}</strong></td>
+                        <td>${d.dividido}</td>
+                        <td></td>
+                    `;
                     tabelaD.appendChild(tr);
                 });
+
+                const elGasto = document.getElementById('total-despesa');
+                if (elGasto) elGasto.innerText = totalGeralGasto.toFixed(2);
+
+                const saldo = totalGeralOrcado - totalGeralGasto;
+                const elSaldo = document.getElementById('valor-saldo');
+                const cardSaldo = document.getElementById('card-saldo');
+                const labelSaldo = document.getElementById('label-saldo');
+                if (elSaldo) elSaldo.innerText = saldo.toFixed(2);
+                if (saldo >= 0) {
+                    if (cardSaldo) cardSaldo.style.background = '#27ae60';
+                    if (labelSaldo) labelSaldo.innerText = 'Saldo Restante (Orçado - Gasto)';
+                } else {
+                    if (cardSaldo) cardSaldo.style.background = '#c0392b';
+                    if (labelSaldo) labelSaldo.innerText = '⚠️ Orçamento Estourado';
+                }
             }
         }
 
