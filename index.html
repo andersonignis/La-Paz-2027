@@ -751,7 +751,7 @@
         <span id="status-cambio" style="font-size: 0.8rem; color: #7f8c8d; font-style: italic;"></span>
     </div>
 
-    <!-- ORÇAMENTO (PLANEJAMENTO) -->
+    <!-- ORÇAMENTO (PLANEJADO) -->
     <section id="orcamento">
         <h2>
             📝 Orçamento (Planejado - Ordenado por Data e Hora)
@@ -920,15 +920,118 @@
     Feito para a melhor viagem de 2027!
 </footer>
 
-<!-- Firebase & Scripts -->
+<!-- SCRIPT AUTÔNOMO OFFLINE (EXECUTA ANTES DE QUALQUER COISA DA REDE) -->
+<script>
+    (function carregarTudoOfflineImediato() {
+        function ler(chave) {
+            try {
+                const r = localStorage.getItem('lapaz_' + chave);
+                return r ? JSON.parse(r) : null;
+            } catch(e) { return null; }
+        }
+
+        const cambio = ler('cambio');
+        if (cambio) {
+            const inBs = document.getElementById('cotacao-bs');
+            const inUsd = document.getElementById('cotacao-usd');
+            if (inBs && cambio.bs) inBs.value = parseFloat(cambio.bs).toFixed(2);
+            if (inUsd && cambio.usd) inUsd.value = parseFloat(cambio.usd).toFixed(2);
+        }
+
+        const participantes = ler('participantes');
+        if (participantes) {
+            const containerHtml = document.getElementById('lista-participantes');
+            if (containerHtml) {
+                containerHtml.innerHTML = '';
+                Object.keys(participantes).forEach(k => {
+                    containerHtml.innerHTML += '<div class="badge-participante">' + participantes[k].nome + '</div>';
+                });
+            }
+        }
+
+        const roteiro = ler('roteiro');
+        if (roteiro) {
+            const listaPendentes = document.getElementById('lista-roteiro');
+            const listaConcluidas = document.getElementById('lista-roteiro-concluidas');
+            const sumP = document.getElementById('summary-pendentes');
+            const sumC = document.getElementById('summary-concluidos');
+            
+            if (listaPendentes && listaConcluidas) {
+                listaPendentes.innerHTML = '';
+                listaConcluidas.innerHTML = '';
+                let qP = 0, qC = 0;
+                
+                const rArr = Object.keys(roteiro).map(k => ({id: k, ...roteiro[k]}));
+                rArr.sort((a, b) => new Date(a.data + 'T' + a.hora) - new Date(b.data + 'T' + b.hora));
+                
+                rArr.forEach(item => {
+                    const isC = !!item.concluido;
+                    if(isC) qC++; else qP++;
+                    const partesData = item.data.split('-');
+                    const dtFmt = partesData[2] + '/' + partesData[1] + '/' + partesData[0];
+                    const div = document.createElement('div');
+                    div.className = 'card-roteiro ' + (isC ? 'concluido' : '');
+                    div.innerHTML = '<div style="flex: 1;"><strong>📅 ' + dtFmt + ' | ⏰ ' + item.hora + '</strong><br><span>' + item.desc + '</span></div>';
+                    if(isC) listaConcluidas.appendChild(div); else listaPendentes.appendChild(div);
+                });
+                
+                if (sumP) sumP.textContent = '📌 Próximas Atividades (' + qP + ')';
+                if (sumC) sumC.textContent = '✅ Atividades Concluídas (' + qC + ')';
+            }
+        }
+
+        const orcamento = ler('orcamento');
+        if (orcamento) {
+            const tabela = document.getElementById('tabela-orcamento');
+            if (tabela) {
+                tabela.innerHTML = '';
+                let total = 0;
+                const oArr = Object.keys(orcamento).map(k => ({id: k, ...orcamento[k]}));
+                oArr.sort((a, b) => new Date(a.data + 'T' + (a.hora||'00:00')) - new Date(b.data + 'T' + (b.hora||'00:00')));
+                
+                oArr.forEach(d => {
+                    const tr = document.createElement('tr');
+                    const partesD = d.data ? d.data.split('-').reverse().join('/') : '';
+                    tr.innerHTML = '<td><strong>' + d.desc + '</strong><br><small>📅 ' + partesD + ' | ⏰ ' + (d.hora||'') + '</small></td><td><strong>' + d.moeda + '</strong> ' + parseFloat(d.valor).toFixed(2) + '</td><td>-</td><td>-</td><td>' + (d.tipo||'Dividido') + '</td><td>' + (d.dividido||'') + '</td><td></td>';
+                    tabela.appendChild(tr);
+                });
+            }
+        }
+
+        const despesas = ler('despesas');
+        if (despesas) {
+            const tabelaD = document.getElementById('tabela-despesas');
+            if (tabelaD) {
+                tabelaD.innerHTML = '';
+                Object.keys(despesas).forEach(k => {
+                    const d = despesas[k];
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td><strong>' + d.desc + '</strong></td><td><strong>' + d.moeda + '</strong> ' + parseFloat(d.valor).toFixed(2) + '</td><td>-</td><td>' + d.pagador + '</td><td>' + d.dividido + '</td><td></td>';
+                    tabelaD.appendChild(tr);
+                });
+            }
+        }
+
+        const checklist = ler('checklist');
+        if (checklist) {
+            const listaCheck = document.getElementById('lista-checklist');
+            if (listaCheck) {
+                listaCheck.innerHTML = '';
+                Object.keys(checklist).forEach(k => {
+                    const item = checklist[k];
+                    listaCheck.innerHTML += '<div class="checklist-item ' + (item.concluido ? 'checked' : '') + '"><span>' + item.desc + '</span></div>';
+                });
+            }
+        }
+    })();
+</script>
+
+<!-- Firebase & Scripts Modulares (Sincronização em Nuvem quando houver conexão) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-    // ==========================================
-    // REGISTRO DO SERVICE WORKER (PWA OFFLINE)
-    // ==========================================
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./service-worker.js')
@@ -937,9 +1040,6 @@
         });
     }
 
-    // ==========================================
-    // LISTA DE E-MAILS AUTORIZADOS A EDITAR
-    // ==========================================
     const EMAILS_AUTORIZADOS = [
         "anderson.ignis@hotmail.com",
         "veronicadossantospaiva@gmail.com"
@@ -964,9 +1064,6 @@
     let totalReaisOrcamentoAtual = 0;
     let totalParticipantesCount = 1;
 
-    // ==========================================
-    // CAMADA DE PERSISTÊNCIA OFFLINE (LOCALSTORAGE)
-    // ==========================================
     function salvarCacheLocal(chave, dados) {
         try {
             localStorage.setItem('lapaz_' + chave, JSON.stringify(dados));
@@ -975,18 +1072,6 @@
         }
     }
 
-    function carregarCacheLocal(chave) {
-        try {
-            const raw = localStorage.getItem('lapaz_' + chave);
-            return raw ? JSON.parse(raw) : null;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // ==========================================
-    // CONTROLE DE NAVEGAÇÃO FLUTUANTE (FAB & TOPO)
-    // ==========================================
     const btnToggleMenu = document.getElementById('btn-toggle-menu');
     const fabMenu = document.getElementById('fab-menu');
     const btnVoltarTopo = document.getElementById('btn-voltar-topo');
@@ -1015,9 +1100,6 @@
         }
     });
 
-    // ==========================================
-    // GERADOR DE LINK DO GOOGLE CALENDAR (SEM LOCAL FORÇADO)
-    // ==========================================
     function detectarLocalizacao(texto) {
         const t = (texto || '').toLowerCase();
         if (t.includes('rio branco')) return 'Rio Branco, AC, Brasil';
@@ -1060,9 +1142,6 @@
         return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${datasFormatadas}&details=${detalhes}${paramLocal}`;
     }
 
-    // ==========================================
-    // SISTEMA DE AUTENTICAÇÃO COM CONTROLE DE ACESSO
-    // ==========================================
     const authLoggedOut = document.getElementById('auth-logged-out');
     const authLoggedIn = document.getElementById('auth-logged-in');
     const userName = document.getElementById('user-name');
@@ -1121,9 +1200,6 @@
         return true;
     }
 
-    // ==========================================
-    // PARTICIPANTES (COM SUPORTE OFFLINE)
-    // ==========================================
     const participantesRef = ref(db, 'participantes');
     
     window.excluirParticipante = function(id) {
@@ -1180,9 +1256,6 @@
         nomeInput.value = '';
     });
 
-    // ==========================================
-    // FUNÇÕES AUXILIARES (Checkboxes)
-    // ==========================================
     function obterDivisaoSelecionada(containerId) {
         const container = document.getElementById(containerId);
         const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
@@ -1208,9 +1281,6 @@
         });
     }
 
-    // ==========================================
-    // CÂMBIO (COM SUPORTE OFFLINE)
-    // ==========================================
     const inputCotacaoBs = document.getElementById('cotacao-bs');
     const inputCotacaoUsd = document.getElementById('cotacao-usd');
     const statusCambio = document.getElementById('status-cambio');
@@ -1296,9 +1366,6 @@
         link.remove();
     }
 
-    // ==========================================
-    // CALENDÁRIO INTERATIVO & AGENDA DIÁRIA
-    // ==========================================
     let mesAtualCal = 2; // Março (0=Jan, 2=Mar)
     let anoAtualCal = 2027;
     let dataSelecionadaCal = "2027-03-13";
@@ -1492,9 +1559,6 @@
         renderizarCalendario();
     });
 
-    // ==========================================
-    // ROTEIRO (COM SUPORTE OFFLINE)
-    // ==========================================
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
     let roteiroCache = {};
@@ -1658,7 +1722,6 @@
         }
     });
 
-    // SUBMIT DO ROTEIRO COM SINCRONIZAÇÃO AUTOMÁTICA NO ORÇAMENTO
     document.getElementById('form-roteiro').addEventListener('submit', (e) => {
         e.preventDefault();
         if (!verificarAutenticado()) return;
@@ -1704,9 +1767,6 @@
         exportarCSV("Roteiro_LaPaz_2027.csv", ["Data", "Hora Início", "Hora Término", "Descrição", "Link / Reserva", "Concluído"], dadosRoteiroCSV);
     });
 
-    // ==========================================
-    // FUNÇÃO PARA CALCULAR O SALDO RESTANTE
-    // ==========================================
     function atualizarSaldoDisponivel(totalGastoReal) {
         const textoOrcamento = document.getElementById('total-orcamento')?.innerText || "0.00";
         const totalOrcado = parseFloat(textoOrcamento.replace(',', '.')) || totalReaisOrcamentoAtual || 0;
@@ -1729,9 +1789,6 @@
         }
     }
 
-    // ==========================================
-    // ORÇAMENTO (COM SUPORTE OFFLINE)
-    // ==========================================
     const orcamentoRef = ref(db, 'orcamento');
     let csvOrcamento = [];
     
@@ -1773,7 +1830,7 @@
                     let numPessoas = totalParticipantesCount;
                     if (membrosLabel !== "Todos do grupo") {
                         const membros = membrosLabel.split(',').filter(m => m.trim().length > 0);
-                        numPessoas = membros.length > 0 ? membros.length : 1;
+                        numPessoas = membros.length > 0 ? numPessoas = membros.length : 1;
                     }
                     valorIndividual = valorConvertido / numPessoas;
                     totalReaisGeral += valorConvertido;
@@ -1913,9 +1970,6 @@
         exportarCSV("Orcamento_Planejado_LaPaz.csv", ["Atividade, Data & Hora", "Moeda Original", "Valor Original", "Valor Total em R$", "Valor por Pessoa em R$", "Tipo de Custo", "Participantes / Divisão"], csvOrcamento);
     });
 
-    // ==========================================
-    // DESPESAS REAIS (COM SUPORTE OFFLINE)
-    // ==========================================
     const despesasRef = ref(db, 'despesas');
     let dadosDespesasDB = {};
     let csvDespesas = [];
@@ -2066,9 +2120,6 @@
         exportarCSV("Despesas_Reais_LaPaz.csv", ["Descrição", "Data", "Hora", "Moeda Original", "Valor Original", "Valor em R$", "Quem Pagou", "Dividido Com"], csvDespesas);
     });
 
-    // ==========================================
-    // CHECKLIST (COM SUPORTE OFFLINE)
-    // ==========================================
     const checklistRef = ref(db, 'checklist');
 
     function renderizarChecklist(data) {
@@ -2122,35 +2173,6 @@
         push(checklistRef, { desc: document.getElementById('desc-checklist').value, concluido: false });
         document.getElementById('form-checklist').reset();
     });
-
-    // ==========================================
-    // CARREGAMENTO INICIAL INSTANTÂNEO DO CACHE
-    // (Garante que tudo apareça mesmo no Modo Avião)
-    // ==========================================
-    const cacheCambio = carregarCacheLocal('cambio');
-    if (cacheCambio) aplicarDadosCambio(cacheCambio);
-
-    const cachePart = carregarCacheLocal('participantes');
-    if (cachePart) renderizarParticipantes(cachePart);
-
-    const cacheRoteiro = carregarCacheLocal('roteiro');
-    if (cacheRoteiro) renderizarRoteiro(cacheRoteiro);
-
-    const cacheOrcamento = carregarCacheLocal('orcamento');
-    if (cacheOrcamento) {
-        orcamentoCache = cacheOrcamento;
-        atualizarVisualOrcamento();
-        atualizarSelectRoteiro();
-    }
-
-    const cacheDespesas = carregarCacheLocal('despesas');
-    if (cacheDespesas) {
-        dadosDespesasDB = cacheDespesas;
-        atualizarVisualDespesas();
-    }
-
-    const cacheChecklist = carregarCacheLocal('checklist');
-    if (cacheChecklist) renderizarChecklist(cacheChecklist);
 
 </script>
 </body>
