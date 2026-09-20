@@ -1,17 +1,6 @@
-const CACHE_NAME = 'lapaz-cache-v1';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  'https://live.staticflickr.com/92/205083804_60315ff3f8_o.jpg'
-];
+const CACHE_NAME = 'lapaz-cache-v2';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
   self.skipWaiting();
 });
 
@@ -31,12 +20,26 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('firebaseio.com') || event.request.url.includes('googleapis.com')) {
+  // Ignora chamadas de autenticação e banco de dados do Firebase
+  if (
+    event.request.url.includes('firebaseio.com') ||
+    event.request.url.includes('googleapis.com') ||
+    event.request.url.includes('identitytoolkit')
+  ) {
     return;
   }
+
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
