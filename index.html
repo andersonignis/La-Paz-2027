@@ -549,14 +549,27 @@
         }
         .checklist-item {
             display: flex;
-            align-items: center;
-            padding: 10px;
+            align-items: flex-start;
+            padding: 12px;
             border-bottom: 1px solid #eee;
-            gap: 10px;
+            gap: 12px;
+            background: #fff;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
         }
-        .checklist-item.checked span {
+        .checklist-item.checked span.titulo-checklist {
             text-decoration: line-through;
             color: #95a5a6;
+        }
+        .checklist-detalhe {
+            font-size: 0.85rem;
+            color: #555;
+            background: #edf2f7;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: inline-block;
         }
         .painel-cambio {
             background-color: #e8f8f5;
@@ -1003,17 +1016,29 @@
         </div>
     </section>
 
-    <!-- CHECKLIST -->
+    <!-- CHECKLIST (COM OCULTAÇÃO DE CONCLUÍDOS, EDIÇÃO E DETALHES) -->
     <section id="checklist">
         <h2>✅ Checklist de Viagem</h2>
-        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Marque os itens e todos verão.</p>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione itens e anote detalhes do que foi escolhido/comprado.</p>
         
         <form id="form-checklist" class="form-group no-print">
-            <input type="text" id="desc-checklist" placeholder="Adicionar novo item ao checklist (ex: Passaporte, Remédio)..." required>
-            <button type="submit">Adicionar Item</button>
+            <input type="hidden" id="edit-id-checklist">
+            <input type="text" id="desc-checklist" placeholder="Item do checklist (ex: Segunda pele térmica, Chip Entel)..." required style="flex: 2; min-width: 200px;">
+            <input type="text" id="detalhe-checklist" placeholder="Detalhe / Observação (ex: Comprado na Decathlon, 10GB)..." style="flex: 2; min-width: 200px;">
+            <button type="submit" id="btn-salvar-checklist">Adicionar Item</button>
         </form>
 
-        <div id="lista-checklist"><p>Carregando checklist...</p></div>
+        <!-- PENDENTES DO CHECKLIST -->
+        <details class="pendentes-container" id="details-checklist-pendentes" open>
+            <summary id="summary-checklist-pendentes">📌 Itens Pendentes (0)</summary>
+            <div id="lista-checklist" style="margin-top: 15px;"><p>Carregando checklist...</p></div>
+        </details>
+
+        <!-- CONCLUÍDOS DO CHECKLIST (OCULTOS POR PADRÃO) -->
+        <details class="concluidos-container" id="details-checklist-concluidos">
+            <summary id="summary-checklist-concluidos">✅ Itens Concluídos (0)</summary>
+            <div id="lista-checklist-concluidos" style="margin-top: 15px;"></div>
+        </details>
     </section>
 </div>
 
@@ -1064,7 +1089,6 @@
             };
         });
 
-        // 1. Processa a Meta Individual (Orçamento Planejado)
         if (orcamentoObj) {
             Object.values(orcamentoObj).forEach(item => {
                 const totalBRL = converterMoeda(item.valor, item.moeda);
@@ -1092,7 +1116,6 @@
             });
         }
 
-        // 2. Processa Gastos Reais (Quem pagou e quem consumiu)
         if (despesasObj) {
             Object.values(despesasObj).forEach(d => {
                 const totalBRL = converterMoeda(d.valor, d.moeda);
@@ -1118,7 +1141,6 @@
             });
         }
 
-        // 3. Renderiza a Tabela de Balanço Individual
         const tabelaBalanco = document.getElementById('tabela-balanco-individual');
         if (tabelaBalanco) {
             tabelaBalanco.innerHTML = '';
@@ -1144,7 +1166,6 @@
             });
         }
 
-        // 4. Algoritmo de Compensação Cruzada (Minimização de Dívidas Splitwise)
         let devedores = [];
         let credores = [];
 
@@ -1373,19 +1394,41 @@
             }
         }
 
+        // RENDERIZAÇÃO OFFLINE DO CHECKLIST RECOLHÍVEL
         const checklist = ler('checklist');
         if (checklist) {
-            const listaCheck = document.getElementById('lista-checklist');
-            if (listaCheck) {
-                listaCheck.innerHTML = '';
+            const listaPendentes = document.getElementById('lista-checklist');
+            const listaConcluidos = document.getElementById('lista-checklist-concluidos');
+            const sumP = document.getElementById('summary-checklist-pendentes');
+            const sumC = document.getElementById('summary-checklist-concluidos');
+
+            if (listaPendentes && listaConcluidos) {
+                listaPendentes.innerHTML = '';
+                listaConcluidos.innerHTML = '';
+                let qP = 0, qC = 0;
+
                 Object.keys(checklist).forEach(k => {
                     const item = checklist[k];
-                    listaCheck.innerHTML += '<div class="checklist-item ' + (item.concluido ? 'checked' : '') + '"><span>' + item.desc + '</span></div>';
+                    const isC = !!item.concluido;
+                    if (isC) qC++; else qP++;
+
+                    const div = document.createElement('div');
+                    div.className = 'checklist-item ' + (isC ? 'checked' : '');
+                    const detalheHtml = item.detalhe ? `<br><small class="checklist-detalhe">📝 ${item.detalhe}</small>` : '';
+                    div.innerHTML = `
+                        <div style="flex: 1;">
+                            <span class="titulo-checklist" style="font-size: 1.05rem; font-weight: 500;">${item.desc}</span>
+                            ${detalheHtml}
+                        </div>
+                    `;
+                    if (isC) listaConcluidos.appendChild(div); else listaPendentes.appendChild(div);
                 });
+
+                if (sumP) sumP.textContent = '📌 Itens Pendentes (' + qP + ')';
+                if (sumC) sumC.textContent = '✅ Itens Concluídos (' + qC + ')';
             }
         }
 
-        // Executa o cálculo do Splitwise no modo offline
         calcularBalançoESplitwise(participantes, orcamento, despesas, cotBs, cotUsd);
     })();
 </script>
@@ -1430,6 +1473,7 @@
     let participantesCache = {};
     let orcamentoCache = {};
     let dadosDespesasDB = {};
+    let checklistCache = {};
 
     function salvarCacheLocal(chave, dados) {
         try {
@@ -2500,44 +2544,102 @@
         exportarCSV("Despesas_Reais_LaPaz.csv", ["Descrição", "Data", "Hora", "Moeda Original", "Valor Original", "Valor em R$", "Quem Pagou", "Dividido Com"], csvDespesas);
     });
 
+    // ==========================================
+    // CHECKLIST (COM OCULTAÇÃO DE CONCLUÍDOS, EDIÇÃO E DETALHES)
+    // ==========================================
     const checklistRef = ref(db, 'checklist');
 
     function renderizarChecklist(data) {
-        const listaChecklist = document.getElementById('lista-checklist');
-        listaChecklist.innerHTML = '';
+        const listaPendentes = document.getElementById('lista-checklist');
+        const listaConcluidos = document.getElementById('lista-checklist-concluidos');
+        const sumP = document.getElementById('summary-checklist-pendentes');
+        const sumC = document.getElementById('summary-checklist-concluidos');
+        
+        listaPendentes.innerHTML = '';
+        listaConcluidos.innerHTML = '';
+        checklistCache = data || {};
         
         if (data && Object.keys(data).length > 0) {
+            let qP = 0, qC = 0;
             Object.keys(data).forEach(key => {
                 const item = data[key];
+                const isC = !!item.concluido;
+                if (isC) qC++; else qP++;
+
                 const div = document.createElement('div');
-                div.className = `checklist-item ${item.concluido ? 'checked' : ''}`;
+                div.className = `checklist-item ${isC ? 'checked' : ''}`;
+                const detalheHtml = item.detalhe ? `<br><small class="checklist-detalhe">📝 ${item.detalhe}</small>` : '';
+                
                 div.innerHTML = `
-                    <input type="checkbox" data-id="${key}" ${item.concluido ? 'checked' : ''}>
-                    <span style="flex: 1; font-size: 1.1rem;">${item.desc}</span>
-                    <button class="btn-delete no-print" data-id="${key}">Excluir</button>
+                    <input type="checkbox" data-id="${key}" class="chk-item-checklist" ${isC ? 'checked' : ''} style="margin-top: 4px; transform: scale(1.3); cursor: pointer;" title="Marcar como concluído">
+                    <div style="flex: 1;">
+                        <span class="titulo-checklist" style="font-size: 1.05rem; font-weight: 500;">${item.desc}</span>
+                        ${detalheHtml}
+                    </div>
+                    <div class="no-print" style="display: flex; gap: 5px;">
+                        <button class="btn-edit btn-edit-checklist" data-id="${key}" style="padding: 4px 8px; font-size: 0.8rem;">✏️</button>
+                        <button class="btn-delete btn-delete-checklist" data-id="${key}" style="padding: 4px 8px; font-size: 0.8rem;">✖</button>
+                    </div>
                 `;
-                listaChecklist.appendChild(div);
+                
+                if (isC) {
+                    listaConcluidos.appendChild(div);
+                } else {
+                    listaPendentes.appendChild(div);
+                }
             });
 
-            listaChecklist.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+            if (sumP) sumP.textContent = `📌 Itens Pendentes (${qP})`;
+            if (sumC) sumC.textContent = `✅ Itens Concluídos (${qC})`;
+
+            if (qP === 0) listaPendentes.innerHTML = '<p style="color: #27ae60; font-weight: bold;">🎉 Tudo pronto e verificado no checklist!</p>';
+            if (qC === 0) listaConcluidos.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Nenhum item concluído ainda.</p>';
+
+            document.querySelectorAll('.chk-item-checklist').forEach(chk => {
                 chk.addEventListener('change', (e) => {
                     if (!verificarAutenticado()) {
                         e.target.checked = !e.target.checked;
                         return;
                     }
                     const id = e.target.getAttribute('data-id');
-                    update(ref(db, 'checklist/' + id), { concluido: e.target.checked });
+                    const estaConcluindo = e.target.checked;
+                    const itemAtual = checklistCache[id];
+
+                    if (estaConcluindo && !itemAtual.detalhe) {
+                        const resposta = prompt(`Quer adicionar um detalhe ou observação para "${itemAtual.desc}"?\n(Ex: Marca/modelo, onde comprou, quem levou... Deixe vazio se não quiser):`);
+                        if (resposta !== null && resposta.trim() !== "") {
+                            update(ref(db, 'checklist/' + id), { concluido: true, detalhe: resposta.trim() });
+                            return;
+                        }
+                    }
+                    update(ref(db, 'checklist/' + id), { concluido: estaConcluindo });
                 });
             });
 
-            listaChecklist.querySelectorAll('.btn-delete').forEach(btn => {
+            document.querySelectorAll('.btn-delete-checklist').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     if (!verificarAutenticado()) return;
                     if(confirm("Excluir item do checklist?")) remove(ref(db, 'checklist/' + e.target.getAttribute('data-id')));
                 });
             });
+
+            document.querySelectorAll('.btn-edit-checklist').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (!verificarAutenticado()) return;
+                    const id = e.target.getAttribute('data-id');
+                    const item = checklistCache[id];
+                    document.getElementById('desc-checklist').value = item.desc;
+                    document.getElementById('detalhe-checklist').value = item.detalhe || '';
+                    document.getElementById('edit-id-checklist').value = id;
+                    document.getElementById('btn-salvar-checklist').textContent = "Atualizar Item";
+                    window.scrollTo({ top: document.getElementById('checklist').offsetTop - 20, behavior: 'smooth' });
+                });
+            });
         } else {
-            listaChecklist.innerHTML = '<p>Nenhum item adicionado ao checklist.</p>';
+            listaPendentes.innerHTML = '<p>Nenhum item adicionado ao checklist.</p>';
+            listaConcluidos.innerHTML = '<p style="color: #7f8c8d;">Nenhum item adicionado ao checklist.</p>';
+            if (sumP) sumP.textContent = `📌 Itens Pendentes (0)`;
+            if (sumC) sumC.textContent = `✅ Itens Concluídos (0)`;
         }
     }
 
@@ -2550,8 +2652,26 @@
     document.getElementById('form-checklist').addEventListener('submit', (e) => {
         e.preventDefault();
         if (!verificarAutenticado()) return;
-        push(checklistRef, { desc: document.getElementById('desc-checklist').value, concluido: false });
+        
+        const editKey = document.getElementById('edit-id-checklist').value;
+        const novoItem = {
+            desc: document.getElementById('desc-checklist').value.trim(),
+            detalhe: document.getElementById('detalhe-checklist').value.trim(),
+            concluido: false
+        };
+
+        if (editKey) {
+            update(ref(db, 'checklist/' + editKey), {
+                desc: novoItem.desc,
+                detalhe: novoItem.detalhe
+            });
+            document.getElementById('btn-salvar-checklist').textContent = "Adicionar Item";
+        } else {
+            push(checklistRef, novoItem);
+        }
+
         document.getElementById('form-checklist').reset();
+        document.getElementById('edit-id-checklist').value = '';
     });
 
 </script>
