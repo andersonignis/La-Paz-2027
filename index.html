@@ -624,7 +624,19 @@
             font-size: 0.9rem;
         }
 
-        /* REGRAS GERAIS DE IMPRESSÃO */
+        /* CARDS DO SPLITWISE E BALANÇO INDIVIDUAL */
+        .card-acerto {
+            background: #fdfefe;
+            border-left: 4px solid #3498db;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         @media print {
             header, nav, form, .btn-edit, .btn-delete, .no-print, footer, .btn-export, .painel-cambio, .box-drive, .auth-bar, details summary, .painel-agenda-container, .btn-add-gcal, .fab-container, hr { display: none !important; }
             details { display: block !important; }
@@ -634,7 +646,6 @@
             .tabela-responsiva { max-height: none !important; overflow: visible !important; border: none !important; }
             .tabela-responsiva thead th { position: static !important; box-shadow: none !important; }
             
-            /* FILTRAGEM DINÂMICA: IMPRIME APENAS A SEÇÃO SELECIONADA */
             body.print-only-roteiro section:not(#roteiro) { display: none !important; }
             body.print-only-orcamento section:not(#orcamento) { display: none !important; }
             body.print-only-despesas section:not(#despesas) { display: none !important; }
@@ -655,6 +666,7 @@
         <a href="#participantes">👥 Participantes</a>
         <a href="#orcamento">📝 Orçamento</a>
         <a href="#despesas">💸 Despesas Reais</a>
+        <a href="#acertos-divisao">🤝 Quem Deve a Quem</a>
         <a href="#mapas">🗺️ Mapa</a>
         <a href="#checklist">✅ Checklist</a>
     </div>
@@ -689,6 +701,7 @@
     <a href="#participantes">Participantes</a>
     <a href="#orcamento">Orçamento</a>
     <a href="#despesas">Despesas Reais</a>
+    <a href="#acertos-divisao">Quem Deve a Quem</a>
     <a href="#mapas">Mapas</a>
     <a href="#checklist">Checklist</a>
 </nav>
@@ -949,6 +962,38 @@
         </div>
     </section>
 
+    <!-- NOVO PAINEL DE ACERTO DE CONTAS & SALDO INDIVIDUAL (SPLITWISE) -->
+    <section id="acertos-divisao">
+        <h2>🤝 Quem Deve a Quem & Balanço Individual</h2>
+        <p class="aviso-nuvem">Calcula automaticamente as transferências mínimas entre os membros e mostra se alguém estourou a sua cota individual.</p>
+
+        <h3 style="color: #2c3e50; font-size: 1.1rem; margin-top: 20px;">📊 Balanço e Meta por Pessoa</h3>
+        <div class="tabela-responsiva">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="background-color: #e2e8f0;">Membro</th>
+                        <th style="background-color: #e2e8f0;">Meta Planejada (R$)</th>
+                        <th style="background-color: #e2e8f0;">Gasto Consumido (R$)</th>
+                        <th style="background-color: #e2e8f0;">Saldo Pessoal Restante</th>
+                        <th style="background-color: #e2e8f0;">Pago do Bolso (R$)</th>
+                        <th style="background-color: #e2e8f0;">Balanço do Membro</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-balanco-individual">
+                    <tr><td colspan="6">Carregando balanço...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 style="color: #2c3e50; font-size: 1.1rem; margin-top: 25px;">💸 Transferências para Quitar as Dívidas (Compensação Cruzada)</h3>
+        <div id="lista-acertos-contas" style="margin-top: 10px;">
+            <p style="color: #7f8c8d; font-style: italic;">Nenhum acerto pendente. As contas estão empatadas!</p>
+        </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
+
     <!-- MAPAS -->
     <section id="mapas">
         <h2>🗺️ Mapa Interativo</h2>
@@ -997,7 +1042,158 @@
     }
 </script>
 
-<!-- SCRIPT AUTÔNOMO OFFLINE COM CONVERSÃO DE VALORES E TOTAIS -->
+<!-- MOTOR CENTRAL DE CÁLCULO SPLITWISE E BALANÇO INDIVIDUAL -->
+<script>
+    function calcularBalançoESplitwise(participantesObj, orcamentoObj, despesasObj, cotBs, cotUsd) {
+        const nomesParticipantes = participantesObj ? Object.values(participantesObj).map(p => p.nome.trim()) : [];
+        if (nomesParticipantes.length === 0) return;
+
+        function converterMoeda(val, moeda) {
+            const num = parseFloat(val) || 0;
+            if (moeda === 'Bs') return num * cotBs;
+            if (moeda === 'US$') return num * cotUsd;
+            return num;
+        }
+
+        const balanco = {};
+        nomesParticipantes.forEach(nome => {
+            balanco[nome] = {
+                metaPlanejada: 0,
+                gastoConsumido: 0,
+                pagoDoBolso: 0
+            };
+        });
+
+        // 1. Processa a Meta Individual (Orçamento Planejado)
+        if (orcamentoObj) {
+            Object.values(orcamentoObj).forEach(item => {
+                const totalBRL = converterMoeda(item.valor, item.moeda);
+                const tipo = item.tipo || "Dividido";
+                const divStr = item.dividido || "Todos do grupo";
+
+                let listaConsumidores = [];
+                if (divStr === "Todos do grupo") {
+                    listaConsumidores = [...nomesParticipantes];
+                } else {
+                    listaConsumidores = divStr.split(',').map(s => s.trim()).filter(s => nomesParticipantes.includes(s));
+                }
+                if (listaConsumidores.length === 0) listaConsumidores = [...nomesParticipantes];
+
+                if (tipo === "Dividido") {
+                    const cota = totalBRL / listaConsumidores.length;
+                    listaConsumidores.forEach(n => {
+                        if (balanco[n]) balanco[n].metaPlanejada += cota;
+                    });
+                } else {
+                    listaConsumidores.forEach(n => {
+                        if (balanco[n]) balanco[n].metaPlanejada += totalBRL;
+                    });
+                }
+            });
+        }
+
+        // 2. Processa Gastos Reais (Quem pagou e quem consumiu)
+        if (despesasObj) {
+            Object.values(despesasObj).forEach(d => {
+                const totalBRL = converterMoeda(d.valor, d.moeda);
+                const pagador = (d.pagador || '').trim();
+                const divStr = d.dividido || "Todos do grupo";
+
+                if (balanco[pagador]) {
+                    balanco[pagador].pagoDoBolso += totalBRL;
+                }
+
+                let listaConsumidores = [];
+                if (divStr === "Todos do grupo") {
+                    listaConsumidores = [...nomesParticipantes];
+                } else {
+                    listaConsumidores = divStr.split(',').map(s => s.trim()).filter(s => nomesParticipantes.includes(s));
+                }
+                if (listaConsumidores.length === 0) listaConsumidores = [...nomesParticipantes];
+
+                const cota = totalBRL / listaConsumidores.length;
+                listaConsumidores.forEach(n => {
+                    if (balanco[n]) balanco[n].gastoConsumido += cota;
+                });
+            });
+        }
+
+        // 3. Renderiza a Tabela de Balanço Individual
+        const tabelaBalanco = document.getElementById('tabela-balanco-individual');
+        if (tabelaBalanco) {
+            tabelaBalanco.innerHTML = '';
+            nomesParticipantes.forEach(nome => {
+                const dados = balanco[nome];
+                const saldoPessoal = dados.metaPlanejada - dados.gastoConsumido;
+                const saldoCreditoDebito = dados.pagoDoBolso - dados.gastoConsumido;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${nome}</strong></td>
+                    <td>R$ ${dados.metaPlanejada.toFixed(2)}</td>
+                    <td style="color: #d35400; font-weight: bold;">R$ ${dados.gastoConsumido.toFixed(2)}</td>
+                    <td style="color: ${saldoPessoal >= 0 ? '#27ae60' : '#c0392b'}; font-weight: bold;">
+                        ${saldoPessoal >= 0 ? '✓ Sobrando R$ ' + saldoPessoal.toFixed(2) : '⚠️ Estourou R$ ' + Math.abs(saldoPessoal).toFixed(2)}
+                    </td>
+                    <td>R$ ${dados.pagoDoBolso.toFixed(2)}</td>
+                    <td style="font-weight: bold; color: ${saldoCreditoDebito >= 0 ? '#27ae60' : '#c0392b'};">
+                        ${saldoCreditoDebito >= 0 ? '+ Tem a receber R$ ' + saldoCreditoDebito.toFixed(2) : '- Deve pagar R$ ' + Math.abs(saldoCreditoDebito).toFixed(2)}
+                    </td>
+                `;
+                tabelaBalanco.appendChild(tr);
+            });
+        }
+
+        // 4. Algoritmo de Compensação Cruzada (Minimização de Dívidas Splitwise)
+        let devedores = [];
+        let credores = [];
+
+        nomesParticipantes.forEach(nome => {
+            const saldoLiq = balanco[nome].pagoDoBolso - balanco[nome].gastoConsumido;
+            if (saldoLiq < -0.01) {
+                devedores.push({ nome: nome, valor: Math.abs(saldoLiq) });
+            } else if (saldoLiq > 0.01) {
+                credores.push({ nome: nome, valor: saldoLiq });
+            }
+        });
+
+        const listaAcertos = document.getElementById('lista-acertos-contas');
+        if (listaAcertos) {
+            listaAcertos.innerHTML = '';
+            if (devedores.length === 0 && credores.length === 0) {
+                listaAcertos.innerHTML = '<p style="color: #27ae60; font-weight: bold;">🎉 Tudo liquidado! Ninguém deve nada a ninguém no momento.</p>';
+                return;
+            }
+
+            let i = 0, j = 0;
+            while (i < devedores.length && j < credores.length) {
+                const devedor = devedores[i];
+                const credor = credores[j];
+                const minValor = Math.min(devedor.valor, credor.valor);
+
+                const card = document.createElement('div');
+                card.className = 'card-acerto';
+                card.innerHTML = `
+                    <div>
+                        <strong>👤 ${devedor.nome}</strong> deve transferir para <strong>👤 ${credor.nome}</strong>
+                    </div>
+                    <div style="font-size: 1.1rem; font-weight: bold; color: #2980b9;">
+                        R$ ${minValor.toFixed(2)}
+                    </div>
+                `;
+                listaAcertos.appendChild(card);
+
+                devedor.valor -= minValor;
+                credor.valor -= minValor;
+
+                if (devedor.valor < 0.01) i++;
+                if (credor.valor < 0.01) j++;
+            }
+        }
+    }
+</script>
+
+<!-- SCRIPT AUTÔNOMO OFFLINE E DESBLOQUEIO DE ROTAÇÃO -->
 <script>
     try {
         if (screen.orientation && screen.orientation.unlock) {
@@ -1188,6 +1384,9 @@
                 });
             }
         }
+
+        // Executa o cálculo do Splitwise no modo offline
+        calcularBalançoESplitwise(participantes, orcamento, despesas, cotBs, cotUsd);
     })();
 </script>
 
@@ -1228,6 +1427,9 @@
     let currentUser = null;
     let totalReaisOrcamentoAtual = 0;
     let totalParticipantesCount = 1;
+    let participantesCache = {};
+    let orcamentoCache = {};
+    let dadosDespesasDB = {};
 
     function salvarCacheLocal(chave, dados) {
         try {
@@ -1235,6 +1437,11 @@
         } catch (e) {
             console.warn("Erro ao salvar cache local", e);
         }
+    }
+
+    function dispararCalculoSplitwiseGeral() {
+        const cotacoes = getCotacoes();
+        calcularBalançoESplitwise(participantesCache, orcamentoCache, dadosDespesasDB, cotacoes.bs, cotacoes.usd);
     }
 
     const btnToggleMenu = document.getElementById('btn-toggle-menu');
@@ -1385,6 +1592,8 @@
         const divDespesa = document.getElementById('divisao-despesa-container');
         let checkboxesHtml = '<label><input type="checkbox" value="Todos do grupo"> Todos do grupo</label>';
 
+        participantesCache = data || {};
+
         if (data && Object.keys(data).length > 0) {
             const keys = Object.keys(data);
             totalParticipantesCount = keys.length || 1;
@@ -1405,6 +1614,7 @@
         divDespesa.innerHTML = checkboxesHtml;
 
         atualizarVisualOrcamento();
+        dispararCalculoSplitwiseGeral();
     }
 
     onValue(participantesRef, (snapshot) => {
@@ -1458,6 +1668,7 @@
             if (dadosCambio.usd) inputCotacaoUsd.value = parseFloat(dadosCambio.usd).toFixed(2);
             atualizarVisualOrcamento();
             atualizarVisualDespesas();
+            dispararCalculoSplitwiseGeral();
         }
     }
 
@@ -1494,6 +1705,7 @@
     function dispararSalvarCambio() {
         atualizarVisualOrcamento();
         atualizarVisualDespesas();
+        dispararCalculoSplitwiseGeral();
         clearTimeout(timeoutSalvarCambio);
         timeoutSalvarCambio = setTimeout(salvarCambioNoFirebase, 800);
     }
@@ -1730,7 +1942,6 @@
     const roteiroRef = ref(db, 'roteiro');
     let dadosRoteiroCSV = [];
     let roteiroCache = {};
-    let orcamentoCache = {};
 
     function atualizarSelectRoteiro(idAtividadeSendoEditada = null) {
         const selectRoteiro = document.getElementById('select-roteiro-orcamento');
@@ -2057,6 +2268,7 @@
         totalReaisOrcamentoAtual = totalReaisGeral;
         const totalGastoAtual = parseFloat(document.getElementById('total-despesa')?.innerText || "0") || 0;
         atualizarSaldoDisponivel(totalGastoAtual);
+        dispararCalculoSplitwiseGeral();
 
         document.querySelectorAll('.btn-delete-tabela-orcamento').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -2139,7 +2351,6 @@
     });
 
     const despesasRef = ref(db, 'despesas');
-    let dadosDespesasDB = {};
     let csvDespesas = [];
 
     function resetarFormDespesaPadrao() {
@@ -2214,6 +2425,7 @@
         }
         
         atualizarSaldoDisponivel(totalReais);
+        dispararCalculoSplitwiseGeral();
 
         document.querySelectorAll('.btn-delete-tabela-despesas').forEach(btn => {
             btn.addEventListener('click', (e) => {
