@@ -552,11 +552,12 @@
             align-items: flex-start;
             padding: 12px;
             border-bottom: 1px solid #eee;
-            gap: 12px;
+            gap: 10px;
             background: #fff;
             border-radius: 6px;
-            margin-bottom: 6px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            margin-bottom: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            border: 1px solid #edf2f7;
         }
         .checklist-item.checked span.titulo-checklist {
             text-decoration: line-through;
@@ -570,6 +571,19 @@
             border-radius: 4px;
             margin-top: 4px;
             display: inline-block;
+        }
+        .btn-order {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-order:hover {
+            background: #e2e8f0;
         }
         .painel-cambio {
             background-color: #e8f8f5;
@@ -975,7 +989,7 @@
         </div>
     </section>
 
-    <!-- NOVO PAINEL DE ACERTO DE CONTAS & SALDO INDIVIDUAL (SPLITWISE) -->
+    <!-- PAINEL DE ACERTO DE CONTAS & SALDO INDIVIDUAL (SPLITWISE) -->
     <section id="acertos-divisao">
         <h2>🤝 Quem Deve a Quem & Balanço Individual</h2>
         <p class="aviso-nuvem">Calcula automaticamente as transferências mínimas entre os membros e mostra se alguém estourou a sua cota individual.</p>
@@ -1016,10 +1030,10 @@
         </div>
     </section>
 
-    <!-- CHECKLIST (COM OCULTAÇÃO DE CONCLUÍDOS, EDIÇÃO E DETALHES) -->
+    <!-- CHECKLIST (COM REORDENAÇÃO ⬆️⬇️, OCULTAÇÃO E DETALHES) -->
     <section id="checklist">
         <h2>✅ Checklist de Viagem</h2>
-        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione itens e anote detalhes do que foi escolhido/comprado.</p>
+        <p class="aviso-nuvem no-print">✅ Sincronização ativada: Adicione itens, defina a ordem de prioridade com ⬆️ e ⬇️ e anote detalhes.</p>
         
         <form id="form-checklist" class="form-group no-print">
             <input type="hidden" id="edit-id-checklist">
@@ -1394,7 +1408,7 @@
             }
         }
 
-        // RENDERIZAÇÃO OFFLINE DO CHECKLIST RECOLHÍVEL
+        // RENDERIZAÇÃO OFFLINE DO CHECKLIST RECOLHÍVEL ORDENADO
         const checklist = ler('checklist');
         if (checklist) {
             const listaPendentes = document.getElementById('lista-checklist');
@@ -1407,8 +1421,10 @@
                 listaConcluidos.innerHTML = '';
                 let qP = 0, qC = 0;
 
-                Object.keys(checklist).forEach(k => {
-                    const item = checklist[k];
+                const cArr = Object.keys(checklist).map(k => ({id: k, ...checklist[k]}));
+                cArr.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+                cArr.forEach(item => {
                     const isC = !!item.concluido;
                     if (isC) qC++; else qP++;
 
@@ -2545,9 +2561,39 @@
     });
 
     // ==========================================
-    // CHECKLIST (COM OCULTAÇÃO DE CONCLUÍDOS, EDIÇÃO E DETALHES)
+    // CHECKLIST (COM REORDENAÇÃO ⬆️ ⬇️)
     // ==========================================
     const checklistRef = ref(db, 'checklist');
+
+    function moverChecklistItem(id, direcao) {
+        if (!verificarAutenticado()) return;
+        const cArr = Object.keys(checklistCache).map(k => ({id: k, ...checklistCache[k]}));
+        
+        // Separa para mover dentro do grupo de pendentes
+        const pendentes = cArr.filter(i => !i.concluido).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+        const index = pendentes.findIndex(i => i.id === id);
+
+        if (index === -1) return;
+
+        const targetIndex = direcao === 'up' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= pendentes.length) return;
+
+        const itemAtual = pendentes[index];
+        const itemTroca = pendentes[targetIndex];
+
+        const ordemAtual = itemAtual.ordem ?? index;
+        const ordemTroca = itemTroca.ordem ?? targetIndex;
+
+        // Se forem iguais, cria valores distintos
+        let novaOrdemAtual = ordemTroca;
+        let novaOrdemTroca = ordemAtual;
+        if (novaOrdemAtual === novaOrdemTroca) {
+            novaOrdemAtual = direcao === 'up' ? ordemTroca - 1 : ordemTroca + 1;
+        }
+
+        update(ref(db, 'checklist/' + itemAtual.id), { ordem: novaOrdemAtual });
+        update(ref(db, 'checklist/' + itemTroca.id), { ordem: novaOrdemTroca });
+    }
 
     function renderizarChecklist(data) {
         const listaPendentes = document.getElementById('lista-checklist');
@@ -2561,32 +2607,58 @@
         
         if (data && Object.keys(data).length > 0) {
             let qP = 0, qC = 0;
-            Object.keys(data).forEach(key => {
-                const item = data[key];
-                const isC = !!item.concluido;
-                if (isC) qC++; else qP++;
+            const cArr = Object.keys(data).map(k => ({id: k, ...data[k]}));
 
+            // Separa e ordena pendentes pela ordem personalizada
+            const pendentes = cArr.filter(i => !i.concluido).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+            const concluidos = cArr.filter(i => !!i.concluido).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+            qP = pendentes.length;
+            qC = concluidos.length;
+
+            pendentes.forEach((item, idx) => {
                 const div = document.createElement('div');
-                div.className = `checklist-item ${isC ? 'checked' : ''}`;
+                div.className = 'checklist-item';
                 const detalheHtml = item.detalhe ? `<br><small class="checklist-detalhe">📝 ${item.detalhe}</small>` : '';
                 
+                const btnSubir = idx > 0 ? `<button class="btn-order btn-move-up" data-id="${item.id}" title="Subir prioridade">⬆️</button>` : '';
+                const btnDescer = idx < pendentes.length - 1 ? `<button class="btn-order btn-move-down" data-id="${item.id}" title="Descer prioridade">⬇️</button>` : '';
+
                 div.innerHTML = `
-                    <input type="checkbox" data-id="${key}" class="chk-item-checklist" ${isC ? 'checked' : ''} style="margin-top: 4px; transform: scale(1.3); cursor: pointer;" title="Marcar como concluído">
+                    <div class="no-print" style="display: flex; flex-direction: column; gap: 3px;">
+                        ${btnSubir}
+                        ${btnDescer}
+                    </div>
+                    <input type="checkbox" data-id="${item.id}" class="chk-item-checklist" style="margin-top: 5px; transform: scale(1.3); cursor: pointer;" title="Marcar como concluído">
                     <div style="flex: 1;">
                         <span class="titulo-checklist" style="font-size: 1.05rem; font-weight: 500;">${item.desc}</span>
                         ${detalheHtml}
                     </div>
                     <div class="no-print" style="display: flex; gap: 5px;">
-                        <button class="btn-edit btn-edit-checklist" data-id="${key}" style="padding: 4px 8px; font-size: 0.8rem;">✏️</button>
-                        <button class="btn-delete btn-delete-checklist" data-id="${key}" style="padding: 4px 8px; font-size: 0.8rem;">✖</button>
+                        <button class="btn-edit btn-edit-checklist" data-id="${item.id}" style="padding: 4px 8px; font-size: 0.8rem;">✏️</button>
+                        <button class="btn-delete btn-delete-checklist" data-id="${item.id}" style="padding: 4px 8px; font-size: 0.8rem;">✖</button>
                     </div>
                 `;
-                
-                if (isC) {
-                    listaConcluidos.appendChild(div);
-                } else {
-                    listaPendentes.appendChild(div);
-                }
+                listaPendentes.appendChild(div);
+            });
+
+            concluidos.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'checklist-item checked';
+                const detalheHtml = item.detalhe ? `<br><small class="checklist-detalhe">📝 ${item.detalhe}</small>` : '';
+
+                div.innerHTML = `
+                    <input type="checkbox" data-id="${item.id}" class="chk-item-checklist" checked style="margin-top: 5px; transform: scale(1.3); cursor: pointer;" title="Desmarcar">
+                    <div style="flex: 1;">
+                        <span class="titulo-checklist" style="font-size: 1.05rem; font-weight: 500;">${item.desc}</span>
+                        ${detalheHtml}
+                    </div>
+                    <div class="no-print" style="display: flex; gap: 5px;">
+                        <button class="btn-edit btn-edit-checklist" data-id="${item.id}" style="padding: 4px 8px; font-size: 0.8rem;">✏️</button>
+                        <button class="btn-delete btn-delete-checklist" data-id="${item.id}" style="padding: 4px 8px; font-size: 0.8rem;">✖</button>
+                    </div>
+                `;
+                listaConcluidos.appendChild(div);
             });
 
             if (sumP) sumP.textContent = `📌 Itens Pendentes (${qP})`;
@@ -2594,6 +2666,20 @@
 
             if (qP === 0) listaPendentes.innerHTML = '<p style="color: #27ae60; font-weight: bold;">🎉 Tudo pronto e verificado no checklist!</p>';
             if (qC === 0) listaConcluidos.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">Nenhum item concluído ainda.</p>';
+
+            // Eventos dos botões de reordenar
+            document.querySelectorAll('.btn-move-up').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    moverChecklistItem(id, 'up');
+                });
+            });
+            document.querySelectorAll('.btn-move-down').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    moverChecklistItem(id, 'down');
+                });
+            });
 
             document.querySelectorAll('.chk-item-checklist').forEach(chk => {
                 chk.addEventListener('change', (e) => {
@@ -2654,19 +2740,23 @@
         if (!verificarAutenticado()) return;
         
         const editKey = document.getElementById('edit-id-checklist').value;
-        const novoItem = {
-            desc: document.getElementById('desc-checklist').value.trim(),
-            detalhe: document.getElementById('detalhe-checklist').value.trim(),
-            concluido: false
-        };
+        const descTexto = document.getElementById('desc-checklist').value.trim();
+        const detalheTexto = document.getElementById('detalhe-checklist').value.trim();
 
         if (editKey) {
             update(ref(db, 'checklist/' + editKey), {
-                desc: novoItem.desc,
-                detalhe: novoItem.detalhe
+                desc: descTexto,
+                detalhe: detalheTexto
             });
             document.getElementById('btn-salvar-checklist').textContent = "Adicionar Item";
         } else {
+            const countAtual = Object.keys(checklistCache).length;
+            const novoItem = {
+                desc: descTexto,
+                detalhe: detalheTexto,
+                concluido: false,
+                ordem: countAtual + 1
+            };
             push(checklistRef, novoItem);
         }
 
